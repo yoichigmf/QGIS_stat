@@ -30,13 +30,30 @@ __copyright__ = '(C) 2020 by Yoichi Kayama'
 
 __revision__ = '$Format:%H$'
 
-from qgis.PyQt.QtCore import QCoreApplication
+from qgis.PyQt.QtCore import ( QCoreApplication ,
+                           QVariant)
+
 from qgis.core import (QgsProcessing,
                        QgsFeatureSink,
+                       QgsProcessingException,
                        QgsProcessingAlgorithm,
+                       QgsProcessingParameterEnum,
                        QgsProcessingParameterFeatureSource,
-                       QgsProcessingParameterFeatureSink)
-
+                       QgsProcessingParameterFeatureSink,
+                       QgsProcessingParameterVectorDestination,
+                       QgsProcessingParameterFile,
+                       QgsProcessingOutputVectorLayer,
+                       QgsVirtualLayerDefinition,
+                       QgsVectorLayer,
+                       QgsProcessingUtils,
+                       QgsWkbTypes,
+                       QgsField,
+                       QgsFields,
+                       QgsFeature,
+                       QgsProcessingParameterString)
+import processing
+import sqlite3
+import csv
 
 class CSVtoStatProcessingAlgorithm(QgsProcessingAlgorithm):
     """
@@ -59,21 +76,37 @@ class CSVtoStatProcessingAlgorithm(QgsProcessingAlgorithm):
     OUTPUT = 'OUTPUT'
     INPUT = 'INPUT'
 
+    ENCODING = 'ENCODING'
+
+    encode = ['SJIS','UTF-8']
+
     def initAlgorithm(self, config):
         """
         Here we define the inputs and output of the algorithm, along
         with some other properties.
         """
-
-        # We add the input vector features source. It can have any kind of
-        # geometry.
         self.addParameter(
-            QgsProcessingParameterFeatureSource(
+            QgsProcessingParameterFile(
                 self.INPUT,
-                self.tr('Input layer'),
-                [QgsProcessing.TypeVectorAnyGeometry]
+                self.tr('Input csv file'),
+                extension='csv'
             )
+         )
+        #  encoding of input file
+        encParam = QgsProcessingParameterEnum(
+                self.ENCODING,
+                self.tr('select encoding of the file')
+            )
+
+        encParam.setOptions(self.encode)
+        encParam.setAllowMultiple(False)
+        encParam.setDefaultValue(QVariant('SJIS'))
+        #  file encoding
+        self.addParameter(
+            encParam
         )
+
+
 
         # We add a feature sink in which to store our processed features (this
         # usually takes the form of a newly created vector layer when the
@@ -89,29 +122,111 @@ class CSVtoStatProcessingAlgorithm(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        csvfile = self.parameterAsFile(
+            parameters,
+            self.INPUT,
+            context
+        )
+        if csvfile  is None:
+            raise QgsProcessingException(self.tr('csv file error'))
 
-        # Retrieve the feature source and sink. The 'dest_id' variable is used
-        # to uniquely identify the feature sink, and must be included in the
-        # dictionary returned by the processAlgorithm function.
-        source = self.parameterAsSource(parameters, self.INPUT, context)
-        (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
-                context, source.fields(), source.wkbType(), source.sourceCrs())
+        #df = QgsVirtualLayerDefinition()
+
+
+
+        enc = self.parameterAsFile(
+            parameters,
+            self.ENCODING,
+            context
+        )
+
+        basename = "memorylayer.gpkg"
+        tmp_path = QgsProcessingUtils.generateTempFilename(basename)
+
+
+        conn = sqlite3.connect(tmp_path)
+     # sqliteを操作するカーソルオブジェクトを作成
+        cur = conn.cursor()
+
+        entbl = "sample_tbl"
+
+     # 調査結果格納テーブルの作成
+        crsql = 'CREATE TABLE \"' + entbl + '\"( address STRING, vn  STRING);'
+        cur.execute( crsql)
+
+        uri = csvfile
+         # csv file read
+        with open( uri, 'r', encoding=self.encode[int(enc)] ) as f:
+             b = csv.reader(f)
+             header = next(b)
+
+             isql = 'insert into \"' + entbl + '\" values (?,?);'
+             for t in b:
+
+                 cur.execute(isql, t)
+
+    # データベースへコミット。これで変更が反映される。
+        conn.commit()
+
+
+
+        sqlstr = 'create table temp_vlayer as select address, count(*) vn from \"' + entbl + '\"  group by address;'
+         # 町名別集計
+        cur.execute(sqlstr )
+
+
+
+
+
+
+        result_def = tmp_path + '|layername=temp_vlayer'
+        tgttable = "temp_vlayer"
+
+
+
+
+        fields = QgsFields()
+        fields.append(QgsField("Address", QVariant.String))
+        fields.append(QgsField("count", QVariant.Int))
+
+        (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context,
+                                               fields )
+
+
 
         # Compute the number of steps to display within the progress bar and
         # get features from source
-        total = 100.0 / source.featureCount() if source.featureCount() else 0
-        features = source.getFeatures()
+        #total = 100.0 / resultlayer.featureCount() if resultlayer.featureCount() else 0
+        #features = resultlayer.getFeatures()
 
-        for current, feature in enumerate(features):
+
+        sqlstr = 'select address, vn  from temp_vlayer;'
+
+        c = conn.cursor()
+
+
+        for row in c.execute( sqlstr ):
+
+        #for current, feature in enumerate(list1):
             # Stop the algorithm if cancel button has been clicked
             if feedback.isCanceled():
                 break
 
-            # Add a feature in the sink
-            sink.addFeature(feature, QgsFeatureSink.FastInsert)
+
+
+            nfeature = QgsFeature(fields)
+
+            nfeature['address'] = row[0]
+            nfeature['count'] = int(row[1])
+            sink.addFeature(nfeature, QgsFeatureSink.FastInsert)
 
             # Update the progress bar
-            feedback.setProgress(int(current * total))
+            #feedback.setProgress(int(current * total))
+
+
+        conn.close()
+
+
 
         # Return the results of the algorithm. In this case our only result is
         # the feature sink which contains the processed features, but some
@@ -119,7 +234,8 @@ class CSVtoStatProcessingAlgorithm(QgsProcessingAlgorithm):
         # statistics, etc. These should all be included in the returned
         # dictionary, with keys matching the feature corresponding parameter
         # or output names.
-        return {self.OUTPUT: dest_id}
+        return {self.OUTPUT: dest_id }
+
 
     def name(self):
         """
@@ -153,7 +269,7 @@ class CSVtoStatProcessingAlgorithm(QgsProcessingAlgorithm):
         contain lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Aggregate by dynamic mesh'
+        return self.tr('Aggregate')
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
