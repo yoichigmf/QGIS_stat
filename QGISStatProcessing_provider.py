@@ -32,9 +32,10 @@ __revision__ = '$Format:%H$'
 
 from qgis.core import QgsProcessingProvider
 from .CSVtoStatProcessing_algorithm import CSVtoStatProcessingAlgorithm
+from .StatCSVProcessingAlgorithm import StatCsvProcessingAlgorithm
 
 
-class CSVtoStatProcessingProvider(QgsProcessingProvider):
+class QGISStatProcessingProvider(QgsProcessingProvider):
 
     def __init__(self):
         """
@@ -54,6 +55,8 @@ class CSVtoStatProcessingProvider(QgsProcessingProvider):
         Loads all algorithms belonging to this provider.
         """
         self.addAlgorithm(CSVtoStatProcessingAlgorithm())
+        self.addAlgorithm(StatCsvProcessingAlgorithm())
+
         # add additional algorithms here
         # self.addAlgorithm(MyOtherAlgorithm())
 
@@ -63,7 +66,7 @@ class CSVtoStatProcessingProvider(QgsProcessingProvider):
         string should be a unique, short, character only string, eg "qgis" or
         "gdal". This string should not be localised.
         """
-        return 'AAC'
+        return 'QGIS_stat'
 
     def name(self):
         """
@@ -72,7 +75,7 @@ class CSVtoStatProcessingProvider(QgsProcessingProvider):
 
         This string should be short (e.g. "Lastools") and localised.
         """
-        return self.tr('AAC')
+        return self.tr('QGIS_stat')
 
     def icon(self):
         """

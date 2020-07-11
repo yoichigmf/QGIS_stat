@@ -35,5 +35,5 @@ def classFactory(iface):  # pylint: disable=invalid-name
     :type iface: QgsInterface
     """
     #
-    from .CSVtoStatProcessing import CSVtoStatProcessingPlugin
-    return CSVtoStatProcessingPlugin()
+    from .QGISStatProcessing import QGISStatProcessingPlugin
+    return QGISStatProcessingPlugin()
