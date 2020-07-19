@@ -33,7 +33,7 @@ __revision__ = '$Format:%H$'
 from qgis.core import QgsProcessingProvider
 from .CSVtoStatProcessing_algorithm import CSVtoStatProcessingAlgorithm
 from .StatCSVProcessingAlgorithm import StatCsvProcessingAlgorithm
-
+from .CreateSumSqlProcessingAlgoritm import CreateSumSqlProcessingAlgorithm
 
 class QGISStatProcessingProvider(QgsProcessingProvider):
 
@@ -56,6 +56,7 @@ class QGISStatProcessingProvider(QgsProcessingProvider):
         """
         self.addAlgorithm(CSVtoStatProcessingAlgorithm())
         self.addAlgorithm(StatCsvProcessingAlgorithm())
+        self.addAlgorithm(CreateSumSqlProcessingAlgorithm())
 
         # add additional algorithms here
         # self.addAlgorithm(MyOtherAlgorithm())
