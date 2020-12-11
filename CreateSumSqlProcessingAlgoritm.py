@@ -213,7 +213,7 @@ class CreateSumSqlProcessingAlgorithm(QgsProcessingAlgorithm):
 
         # メッシュ単位人口の集計
         alg_params = {
-                    'DATABASE': source
+                    'DATABASE': source,
                     'SQL': sqlstring
                 }
 
@@ -223,7 +223,7 @@ class CreateSumSqlProcessingAlgorithm(QgsProcessingAlgorithm):
         nsql =  'create table tmp_sum as select "' + address_f + '" address, sum("' + pop_f + '") pop_t from "' + table_name + '" group by "' + address_f  +'"'
 
         alg2_params = {
-                    'DATABASE': source
+                    'DATABASE': source,
                     'SQL': nsql
                 }
 
