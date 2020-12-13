@@ -40,7 +40,7 @@ from qgis.core import QgsProcessingParameterVectorDestination
 import processing
 
 
-class StatCsvProcessingAlgorithm(QgsProcessingAlgorithm):
+class StatCsvProcessingToGeoJsonAlgorithm(QgsProcessingAlgorithm):
 
     def initAlgorithm(self, config=None):
         self.addParameter(QgsProcessingParameterVectorLayer('addresslayer', '住所レイヤ', types=[QgsProcessing.TypeVectorPolygon], defaultValue=None))
@@ -49,16 +49,16 @@ class StatCsvProcessingAlgorithm(QgsProcessingAlgorithm):
         #self.addParameter(QgsProcessingParameterFile('CSVfile', 'CSV file', behavior=QgsProcessingParameterFile.File, fileFilter='All Files（*.*）', defaultValue=None))
         self.addParameter(
             QgsProcessingParameterFile(
-                'INPUT',
+                'CSVfile',
                 '入力csvファイル指定',
                 extension='csv'
             )
          )
 
 
-        self.addParameter(QgsProcessingParameterEnum('ENCODING', 'ENCODE', options=['SJIS','UTF-8'], allowMultiple=False, defaultValue=None))
+        self.addParameter(QgsProcessingParameterEnum('encode', 'ENCODE', options=['SJIS','UTF-8'], allowMultiple=False, defaultValue=None))
 
-        self.addParameter(QgsProcessingParameterVectorDestination('OUTPUT', '出力ファイル名', type=QgsProcessing.TypeVectorAnyGeometry, createByDefault=True, defaultValue=None))
+        self.addParameter(QgsProcessingParameterVectorDestination('GeojsonOutput', '出力geojsonファイル名', type=QgsProcessing.TypeVectorAnyGeometry, createByDefault=True, defaultValue=None))
 
     def processAlgorithm(self, parameters, context, model_feedback):
         # Use a multi-step feedback, so that individual child algorithm progress reports are adjusted for the
@@ -66,15 +66,15 @@ class StatCsvProcessingAlgorithm(QgsProcessingAlgorithm):
         feedback = QgsProcessingMultiStepFeedback(5, model_feedback)
         results = {}
         outputs = {}
-        model_feedback.pushConsoleInfo( "start")
+
         # CSVtoStatProcessing
         alg_params = {
-            'ENCODING': parameters['ENCODING'],
-            'INPUT': parameters['INPUT'],
+            'ENCODING': parameters['encode'],
+            'INPUT': parameters['CSVfile'],
             'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
         }
         outputs['Csvtostatprocessing'] = processing.run('QGIS_stat:CSVtoStatProcessing', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
-        model_feedback.pushConsoleInfo( "end csv")
+
         feedback.setCurrentStep(1)
         if feedback.isCanceled():
             return {}
@@ -92,7 +92,7 @@ class StatCsvProcessingAlgorithm(QgsProcessingAlgorithm):
             'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
         }
         outputs['TableJoin'] = processing.run('native:joinattributestable', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
-        model_feedback.pushConsoleInfo( "end join")
+
         feedback.setCurrentStep(2)
         if feedback.isCanceled():
             return {}
@@ -125,23 +125,23 @@ class StatCsvProcessingAlgorithm(QgsProcessingAlgorithm):
         alg_params = {
             'INPUT': outputs['Geopackage']['OUTPUT'],
             'OPTIONS': '',
-            'OUTPUT': parameters['OUTPUT']
+            'OUTPUT': parameters['GeojsonOutput']
         }
         outputs['Gdal_translate'] = processing.run('gdal:convertformat', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
-        results['OUTPUT'] = outputs['Gdal_translate']['OUTPUT']
+        results['GeojsonOutput'] = outputs['Gdal_translate']['OUTPUT']
         return results
 
     def name(self):
-        return 'Stat_CSVAddressPolygon'
+        return 'Stat_CSV'
 
     def displayName(self):
-        return 'CSV住所別集計(行政界別)'
+        return 'CSV住所別集計（GeoJSON出力)'
 
     def group(self):
-        return '集計'
+        return 'Aggregate'
 
     def groupId(self):
         return 'Aggregate'
 
     def createInstance(self):
-        return StatCsvProcessingAlgorithm()
+        return StatCsvProcessingToGeoJsonAlgorithm()
