@@ -162,22 +162,22 @@ def  ImportandAggregateCSVFile( dbname, entbl, uri, worklayer ):
 #  ad_areacolumn        行政界ポリゴンテーブルの面積値格納カラム名
 #
 
-def CalcDataUsingRatio(  outputdb, intersect_output, area_column, ratio_column , out_table , ad_areacolumn ):
+def CalcDataUsingRatio(  intersect_layer, area_column, ratio_column , ad_areacolumn , feedback ):
 #  Intersect 結果に対する 面積算出
 
-     feedback = QgsProcessingFeedback()
+    # feedback = QgsProcessingFeedback()
      
-     intersect_name = outputdb + "|layername=" + intersect_output 
+     #intersect_name = outputdb + "|layername=" + intersect_output 
 
-     ilayer = QgsVectorLayer(intersect_name, "intersect", "ogr")
+     #ilayer = QgsVectorLayer(intersect_name, "intersect", "ogr")
 
-     if ilayer.isValid():
+     if intersect_layer.isValid():
               print("intersect Layer load OK")
      else:
               print("intersect Layer load Fail")
               sys.exit()
 
-     ilayer.setProviderEncoding('utf-8')
+     intersect_layer.setProviderEncoding('utf-8')
 
 
 
@@ -187,7 +187,7 @@ def CalcDataUsingRatio(  outputdb, intersect_output, area_column, ratio_column ,
      output_tbl3 = 'ogr:dbname=\'' + outputdb + '\' table=\"intersect' +  hogehogehoge_id +  '\" (geom) sql='
 
 
-     params3 = { 'INPUT' : ilayer, 'FIELD_NAME' : area_column , 'FIELD_TYPE': 0, 'FIELD_LENGTH':12, 'FIELD_PRECISION':5, 'NEW_FIELD':1,'FORMULA':'$area','OUTPUT' : output_tbl3 }
+     params3 = { 'INPUT' : intersect_layer, 'FIELD_NAME' : area_column , 'FIELD_TYPE': 0, 'FIELD_LENGTH':12, 'FIELD_PRECISION':5, 'NEW_FIELD':1,'FORMULA':'$area','OUTPUT' : intersect_layer }
 
      res = processing.run('qgis:fieldcalculator', params3, feedback=feedback)
 
@@ -199,25 +199,25 @@ def CalcDataUsingRatio(  outputdb, intersect_output, area_column, ratio_column ,
 
 #  行政界ポリゴンと交差ポリゴンの面積比を 集計値にかけて交差ポリゴン単位の集計値を算出する
 
-     intersect2_name =  outputdb + "|layername=" + 'intersect' +  hogehogehoge_id
+     #intersect2_name =  outputdb + "|layername=" + 'intersect' +  hogehogehoge_id
 
-     i2layer = QgsVectorLayer(intersect2_name, "intersect2", "ogr")
+     #i2layer = QgsVectorLayer(intersect2_name, "intersect2", "ogr")
 
-     if i2layer.isValid():
-              print("intersect Layer2 load OK")
-     else:
-              print("intersect Laye2r load Fail")
-              sys.exit()
+     #if i2layer.isValid():
+     #         print("intersect Layer2 load OK")
+     #else:
+     #         print("intersect Laye2r load Fail")
+     #         sys.exit()
 
-     i2layer.setProviderEncoding('utf-8')
+     #i2layer.setProviderEncoding('utf-8')
 
 
-     output_tbl4 = 'ogr:dbname=\'' + outputdb + '\' table=\"' + out_table  +  '\" (geom) sql='
+     #output_tbl4 = 'ogr:dbname=\'' + outputdb + '\' table=\"' + out_table  +  '\" (geom) sql='
 
 
      expstr = '\"' + area_column + '\"/ \"'  + ad_areacolumn + '\" * \"count(*)\"'
 
-     params4 = { 'INPUT' : i2layer, 'FIELD_NAME' : ratio_column, 'FIELD_TYPE': 0, 'FIELD_LENGTH':12, 'FIELD_PRECISION':5, 'NEW_FIELD':1,'FORMULA':expstr ,'OUTPUT' : output_tbl4 }
+     params4 = { 'INPUT' : intersect_layer, 'FIELD_NAME' : ratio_column, 'FIELD_TYPE': 0, 'FIELD_LENGTH':12, 'FIELD_PRECISION':5, 'NEW_FIELD':1,'FORMULA':expstr ,'OUTPUT' : intersect_laye }
 
      res = processing.run('qgis:fieldcalculator', params4, feedback=feedback)
 
@@ -225,7 +225,7 @@ def CalcDataUsingRatio(  outputdb, intersect_output, area_column, ratio_column ,
 
      #print( output_tbl4 )
 
-     return( output_tbl4 )
+     return( intersect_layer)
      
      
 

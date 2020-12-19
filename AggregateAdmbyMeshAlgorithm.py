@@ -62,6 +62,8 @@ import processing
 import sqlite3
 import csv
 
+from .mod import  agtools
+
 class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
     """
     This is an example algorithm that takes a vector layer and
@@ -198,7 +200,7 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
 
      #print( output_tbl2 )
      #return(  res )
-     
+        res = agtools.CalcDataUsingRatio(  res['OUTPUT'], area_column, ratio_column ,  ad_areacolumn , model_feedback):
 
         #outputs_statv = processing.run('QGIS_stat:Stat_CSVAddressPolygon', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
 
