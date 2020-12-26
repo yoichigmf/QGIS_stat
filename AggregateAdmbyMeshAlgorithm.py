@@ -196,11 +196,11 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
         params2 = { 'INPUT' : meshLayer, 'INPUT_FIELDS' : [], 
                 'OUTPUT' : QgsProcessing.TEMPORARY_OUTPUT, 'OVERLAY' : inputLayer, 'OVERLAY_FIELDS' : [] }
 
-        res = processing.run('native:intersection', params2, feedback=model_feedback)
+        res2 = processing.run('native:intersection', params2, feedback=model_feedback)
 
      #print( output_tbl2 )
      #return(  res )
-        res = agtools.CalcDataUsingRatio(  res['OUTPUT'], area_column, ratio_column ,  ad_areacolumn , model_feedback):
+        res = agtools.CalcDataUsingRatio(  res2['OUTPUT'], area_column, ratio_column ,  ad_areacolumn , model_feedback)
 
         #outputs_statv = processing.run('QGIS_stat:Stat_CSVAddressPolygon', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
 
