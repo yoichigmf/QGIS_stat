@@ -1,8 +1,9 @@
 # import os
 #from qgis.core import *
 from qgis.core import (
+  QgsProcessing,
   QgsGeometry,
-QgsField,
+  QgsField,
   QgsPointXY,
   QgsFeature,
   QgsProcessingFeedback,
@@ -152,7 +153,7 @@ def  ImportandAggregateCSVFile( dbname, entbl, uri, worklayer ):
 
 
 # Intersect ポリゴンと元の行政界ポリゴンの面積比とサンプル数値をかけてInterSectポリゴン単位の案分サンプル値を作成する
-#  defCalcDataUsingRatio(  outputdb, intersect_output, area_column,ratio_column , out_table, ad_areacolumn)
+#  def CalcDataUsingRatio(  intersect_output, area_column,ratio_column , out_table, ad_areacolumn)
 #
 #   outputdb   ワークDBファイル
 #   intersect_output    Intersect 結果
@@ -182,12 +183,12 @@ def CalcDataUsingRatio(  intersect_layer, area_column, ratio_column , ad_areacol
 
 
 
-     hogehogehoge_id = str(uuid.uuid4())
+     #hogehogehoge_id = str(uuid.uuid4())
 
-     output_tbl3 = 'ogr:dbname=\'' + outputdb + '\' table=\"intersect' +  hogehogehoge_id +  '\" (geom) sql='
+     #output_tbl3 = 'ogr:dbname=\'' + outputdb + '\' table=\"intersect' +  hogehogehoge_id +  '\" (geom) sql='
 
 
-     params3 = { 'INPUT' : intersect_layer, 'FIELD_NAME' : area_column , 'FIELD_TYPE': 0, 'FIELD_LENGTH':12, 'FIELD_PRECISION':5, 'NEW_FIELD':1,'FORMULA':'$area','OUTPUT' : intersect_layer }
+     params3 = { 'INPUT' : intersect_layer, 'FIELD_NAME' : area_column , 'FIELD_TYPE': 0, 'FIELD_LENGTH':12, 'FIELD_PRECISION':5, 'NEW_FIELD':1, 'FORMULA':'$area', 'OUTPUT' : QgsProcessing.TEMPORARY_OUTPUT  }
 
      res = processing.run('qgis:fieldcalculator', params3, feedback=feedback)
 
@@ -217,15 +218,15 @@ def CalcDataUsingRatio(  intersect_layer, area_column, ratio_column , ad_areacol
 
      expstr = '\"' + area_column + '\"/ \"'  + ad_areacolumn + '\" * \"count(*)\"'
 
-     params4 = { 'INPUT' : intersect_layer, 'FIELD_NAME' : ratio_column, 'FIELD_TYPE': 0, 'FIELD_LENGTH':12, 'FIELD_PRECISION':5, 'NEW_FIELD':1,'FORMULA':expstr ,'OUTPUT' : intersect_laye }
+     params4 = { 'INPUT' : res["OUTPUT"], 'FIELD_NAME' : ratio_column, 'FIELD_TYPE': 0, 'FIELD_LENGTH':12, 'FIELD_PRECISION':5,'NEW_FIELD':1,'FORMULA':expstr ,'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT }
 
-     res = processing.run('qgis:fieldcalculator', params4, feedback=feedback)
+     res2 = processing.run('qgis:fieldcalculator', params4, feedback=feedback)
 
 
 
      #print( output_tbl4 )
 
-     return( intersect_layer)
+     return( res2)
      
      
 

@@ -125,7 +125,10 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
                          type=QgsProcessingParameterField.String, parentLayerParameterName='addresslayer', allowMultiple=False, defaultValue=None))
 
         self.addParameter(QgsProcessingParameterVectorLayer('meshlayer', 'メッシュレイヤ',
-                         types=[QgsProcessing.TypeVectorPolygon], defaultValue=None))
+                         types=[QgsProcessing.TypeVectorPolygon], optional=False, defaultValue=None))
+        
+        self.addParameter(QgsProcessingParameterField('meshid', 'メッシュIDフィールド', 
+                         type=QgsProcessingParameterField.String, parentLayerParameterName='meshlayer', optional=False, allowMultiple=False))
 
 
         self.addParameter(QgsProcessingParameterNumber('limit_sample', '最小サンプル数',
@@ -138,23 +141,23 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
                           defaultValue=False))
 
         #  propotinal division method
-        propParam = QgsProcessingParameterEnum(
-                "PROPDIV",
-                self.tr('按分方法選択')
-            )
+        #propParam = QgsProcessingParameterEnum(
+        #        "PROPDIV",
+        #        self.tr('按分方法選択')
+        #    )
 
-        propParam.setOptions(self.proportional_div)
-        propParam.setAllowMultiple(False)
-        propParam.setDefaultValue(QVariant('人口'))
+        #propParam.setOptions(self.proportional_div)
+        #propParam.setAllowMultiple(False)
+        #propParam.setDefaultValue(QVariant('人口'))
         #  file encoding
-        self.addParameter(
-            propParam
-        )
+        #self.addParameter(
+         #   propParam
+        #)
 
-        self.addParameter(QgsProcessingParameterVectorLayer('poplayer', '人口レイヤ',
-                         types=[QgsProcessing.TypeVectorPolygon], optional=True,  defaultValue=None))
-        self.addParameter(QgsProcessingParameterField('popfield', '人口フィールド', 
-                         type=QgsProcessingParameterField.String, parentLayerParameterName='addresslayer', optional=True, allowMultiple=False, defaultValue=None))
+        #self.addParameter(QgsProcessingParameterVectorLayer('poplayer', '人口レイヤ',
+        #                 types=[QgsProcessing.TypeVectorPolygon], optional=True,  defaultValue=None))
+        #self.addParameter(QgsProcessingParameterField('popfield', '人口フィールド', 
+        #                 type=QgsProcessingParameterField.String, parentLayerParameterName='addresslayer', optional=True, allowMultiple=False, defaultValue=None))
         
 
 
@@ -215,9 +218,10 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
 
         outputs_statv = processing.run('QGIS_stat:Stat_CSVAddressPolygon', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
 
-        
+        if feedback.isCanceled():
+            return {}
 
-
+        #parameters['OUTPUT']
 
         # Return the results of the algorithm. In this case our only result is
         # the feature sink which contains the processed features, but some
@@ -245,7 +249,7 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
         Returns the translated algorithm name, which should be used for any
         user-visible display of the algorithm name.
         """
-        return 'CSVメッシュ別集計'
+        return 'CSVメッシュ別集計(面積按分)'
 
     def group(self):
         """

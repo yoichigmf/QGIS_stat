@@ -51,10 +51,13 @@ from qgis.core import (QgsProcessing,
                        QgsVectorLayer,
                        QgsProcessingUtils,
                        QgsProcessingMultiStepFeedback,
+                       QgsProject,
                        QgsWkbTypes,
+                       QgsExpression,
                        QgsField,
                        QgsFields,
                        QgsFeature,
+                       QgsFeatureRequest,
                        QgsProcessingParameterString)
 
 
@@ -103,44 +106,50 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
                 '入力レイヤ'
             )
          )
+
+        self.addParameter(QgsProcessingParameterField('aggrefield', '集計値フィールド', 
+                         type=QgsProcessingParameterField.Numeric, parentLayerParameterName=self.INPUT, optional=False, allowMultiple=False, defaultValue=None))
         
 
         self.addParameter(QgsProcessingParameterVectorLayer('meshlayer', 'メッシュレイヤ',
                          types=[QgsProcessing.TypeVectorPolygon], defaultValue=None))
 
+        self.addParameter(QgsProcessingParameterField('meshid', 'メッシュIDフィールド', 
+                         type=QgsProcessingParameterField.String, parentLayerParameterName='meshlayer', optional=False, allowMultiple=False))
+
 
         self.addParameter(QgsProcessingParameterNumber('limit_sample', '最小サンプル数',
                           defaultValue=3))
 
-        self.addParameter(QgsProcessingParameterNumber('maxdivide', '最大分割回数',
-                          defaultValue=8))
+        #self.addParameter(QgsProcessingParameterNumber('maxdivide', '最大分割回数',
+        #                  defaultValue=8))
 
         self.addParameter(QgsProcessingParameterBoolean('uneven_div', '不均等分割',
                           defaultValue=False))
 
-        self.addParameter(QgsProcessingParameterNumber('current_div', 'カレント分割回数',
-                          defaultValue=1))
+        #self.addParameter(QgsProcessingParameterNumber('current_div', 'カレント分割回数',
+        #                  defaultValue=1))
 
 
 
         #  propotinal division method
-        propParam = QgsProcessingParameterEnum(
-                "PROPDIV",
-                self.tr('按分方法選択')
-            )
+        #propParam = QgsProcessingParameterEnum(
+        #        "PROPDIV",
+        #        self.tr('按分方法選択')
+        #    )
 
-        propParam.setOptions(self.proportional_div)
-        propParam.setAllowMultiple(False)
-        propParam.setDefaultValue(QVariant('人口'))
+        #propParam.setOptions(self.proportional_div)
+        #propParam.setAllowMultiple(False)
+        #propParam.setDefaultValue(QVariant('人口'))
         #  file encoding
-        self.addParameter(
-            propParam
-        )
+        #self.addParameter(
+        #    propParam
+        #)
 
-        self.addParameter(QgsProcessingParameterVectorLayer('poplayer', '人口レイヤ',
-                         types=[QgsProcessing.TypeVectorPolygon], optional=True,  defaultValue=None))
-        self.addParameter(QgsProcessingParameterField('popfield', '人口フィールド', 
-                         type=QgsProcessingParameterField.String, parentLayerParameterName='addresslayer', optional=True, allowMultiple=False, defaultValue=None))
+        #self.addParameter(QgsProcessingParameterVectorLayer('poplayer', '人口レイヤ',
+        #                 types=[QgsProcessing.TypeVectorPolygon], optional=True,  defaultValue=None))
+        #self.addParameter(QgsProcessingParameterField('popfield', '人口フィールド', 
+        #                 type=QgsProcessingParameterField.String, parentLayerParameterName='addresslayer', optional=True, allowMultiple=False, defaultValue=None))
         
 
 
@@ -180,8 +189,25 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
         if meshLayer  is None:
             raise QgsProcessingException(self.tr('mesh layer missed'))
 
+        meshidfields = self.parameterAsFields  (
+             parameters,
+             'meshid',
+             context
+        )
+
+
+        aggrefields = self.parameterAsFields  (
+             parameters,
+             'aggrefield',
+             context
+        )
+
+        limit_sample = self.parameterAsInt ( parameters,
+             'limit_sample',
+             context)
 
       
+
         feedback.setCurrentStep(1)
         if feedback.isCanceled():
             return {}
@@ -191,21 +217,245 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
 
         #Stat_CSVAddressPolygon
 
-       
+    
+    #   行政界の面積計算
+    #    
+    #  面積出力フィールド名
+
+        area_column = 'adm_area'
+
+        params3 = { 'INPUT' :  inputLayer, 'FIELD_NAME' : area_column , 'FIELD_TYPE': 0, 'FIELD_LENGTH':12, 'FIELD_PRECISION':5, 
+                 'NEW_FIELD':1,'FORMULA':'$area','OUTPUT' :QgsProcessing.TEMPORARY_OUTPUT }
+
+        res3 = processing.run('qgis:fieldcalculator', params3, feedback=feedback )
+
+        if feedback.isCanceled():
+            return {}
+
+        feedback.pushConsoleInfo( "caluculate area OK "  )
+
+    #   ここから関数化がいいかも
+    #   メッシュと行政界のIntesect
      
         params2 = { 'INPUT' : meshLayer, 'INPUT_FIELDS' : [], 
-                'OUTPUT' : QgsProcessing.TEMPORARY_OUTPUT, 'OVERLAY' : inputLayer, 'OVERLAY_FIELDS' : [] }
+                'OUTPUT' : QgsProcessing.TEMPORARY_OUTPUT, 'OVERLAY' : res3["OUTPUT"], 'OVERLAY_FIELDS' : [] }
+                 #             'OUTPUT' : parameters["OUTPUT"], 'OVERLAY' : res3["OUTPUT"], 'OVERLAY_FIELDS' : [] }
 
-        res2 = processing.run('native:intersection', params2, feedback=model_feedback)
+        res2 = processing.run('native:intersection', params2, feedback=feedback)
+        if feedback.isCanceled():
+            return {}
 
-     #print( output_tbl2 )
-     #return(  res )
-        res = agtools.CalcDataUsingRatio(  res2['OUTPUT'], area_column, ratio_column ,  ad_areacolumn , model_feedback)
+        feedback.pushConsoleInfo( "intersect  OK "  )
+    #   Inter sect ポリゴンの面積計算
 
-        #outputs_statv = processing.run('QGIS_stat:Stat_CSVAddressPolygon', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
+
+
+        tgLayer = res2["OUTPUT"]
+
+        #if type(tgLayer) is str:
+        #    tgLayer =  QgsVectorLayer(tgLayer, "intesect", "ogr")
+
+        #tgLayer.beginEditCommand("Feature triangulation")
+
+        ad_areacolumn = 'isect_area'
+        ratio_column = 'area_ratio'
+        anbun_col = 'anbun_colum'
+
+
+        tgLayer.dataProvider().addAttributes([QgsField(ad_areacolumn, QVariant.Double),QgsField(ratio_column, QVariant.Double),QgsField(anbun_col,QVariant.Double)])
+        tgLayer.updateFields()
 
         
+        params4 = { 'INPUT' : tgLayer, 'FIELD_NAME' : ad_areacolumn , 'FIELD_TYPE': 0, 'FIELD_LENGTH':12, 
+        #             'FIELD_PRECISION':5, 'NEW_FIELD':1,'FORMULA':'$area','OUTPUT' :parameters["OUTPUT"] }
+                    'FIELD_PRECISION':5, 'NEW_FIELD':False,'FORMULA':'$area','OUTPUT' :QgsProcessing.TEMPORARY_OUTPUT }    
 
+
+        #for feat  in tgLayer.getFeatures():
+
+            #feat[ad_areacolumn] = feat.geometry().area()
+        #    feedback.pushConsoleInfo( "feature "+ str(feat[0]) )
+        #    feedback.pushConsoleInfo( "area "+ str(feat.geometry().area())  )
+            #tgLayer.updateFeature(feat)
+        
+        #tgLayer.endEditCommand()
+
+        #results["OUTPUT"] = res2["OUTPUT"]
+
+        #return results
+
+
+
+        #params4 = { 'INPUT' : res2["OUTPUT"], 'FIELD_NAME' : ad_areacolumn , 'FIELD_TYPE': 0, 'FIELD_LENGTH':12, 
+        #             'FIELD_PRECISION':5, 'NEW_FIELD':1,'FORMULA':'$area','OUTPUT' :parameters["OUTPUT"] }
+        #            'FIELD_PRECISION':5, 'NEW_FIELD':1,'FORMULA':'$area','OUTPUT' :QgsProcessing.TEMPORARY_OUTPUT }
+
+        res5 = processing.run('qgis:fieldcalculator', params4, feedback=feedback)
+        if feedback.isCanceled():
+            return {}
+        feedback.pushConsoleInfo( "calc area ok " )
+
+
+        ratio_str = ad_areacolumn + "/" + area_column
+        params5 = { 'INPUT' : res5["OUTPUT"], 'FIELD_NAME' :  ratio_column , 'FIELD_TYPE': 0, 'FIELD_LENGTH':12, 
+         #            'FIELD_PRECISION':5, 'NEW_FIELD':False,'FORMULA':ratio_str,'OUTPUT' :parameters["OUTPUT"] }
+                    'FIELD_PRECISION':5, 'NEW_FIELD':False,'FORMULA':ratio_str,'OUTPUT' :QgsProcessing.TEMPORARY_OUTPUT }   
+        res6 = processing.run('qgis:fieldcalculator', params5, feedback=feedback)
+        if feedback.isCanceled():
+            return {}
+        feedback.pushConsoleInfo( "calc ratio ok " )
+
+      
+
+
+     # Intersect ポリゴンと元の行政界ポリゴンの面積比とサンプル数値をかけてInterSectポリゴン単位の案分サンプル値を作成する
+     #  def CalcDataUsingRatio(  intersect_output, area_column,ratio_column , out_table, ad_areacolumn)
+     #
+
+     #   intersect_output    Intersect 結果
+     #   area_column   面積出力カラム名
+     #   ratio_column   按分集計値出力カラム名
+     #   out_table     出力テーブル名
+     #  ad_areacolumn        行政界ポリゴンテーブルの面積値格納カラム名
+     #
+     #   ratio_column = 'area_ratio'
+
+     #   res5 = agtools.CalcDataUsingRatio(  res4['OUTPUT'], area_column, ratio_column ,  ad_areacolumn , model_feedback)
+
+
+     #  按分数値算出
+
+        anbun_col = 'anbun_colum'
+
+        formula_str = aggrefields[0] + " * " + ratio_column
+
+        params7 = { 'INPUT' : res6["OUTPUT"], 'FIELD_NAME' : anbun_col , 'FIELD_TYPE': 0, 'FIELD_LENGTH':12, 
+                    # 'FIELD_PRECISION':5, 'NEW_FIELD':False,'FORMULA':formula_str ,'OUTPUT' :parameters["OUTPUT"]  }
+                               'FIELD_PRECISION':5, 'NEW_FIELD':0,'FORMULA':formula_str ,'OUTPUT' :QgsProcessing.TEMPORARY_OUTPUT }
+
+        res7 = processing.run('qgis:fieldcalculator', params7, feedback=feedback)
+        if feedback.isCanceled():
+            return {}
+        feedback.pushConsoleInfo( "anbun ok " )
+     #   results["OUTPUT"] = res7["OUTPUT"]
+      #  return results
+
+    #   按分数値をもとにメッシュ別集計
+        meshid_f = meshidfields[0]
+
+        #QgsProject.instance().addMapLayer(res6["OUTPUT"])
+
+        #mesh_aggregate = 'aggregate(layer:=\'' + res6["OUTPUT"].id() + '\',aggregate:=\'sum\',expression:="'+ anbun_col + '", filter:="' + meshid_f +'"=attribute(@parent,\'' + meshid_f + '\'))'
+        #feedback.pushConsoleInfo( "mesh_aggregate " + mesh_aggregate )
+
+        #mesh_exr = QgsExpression( mesh_aggregate )
+        #params6 = { 'INPUT' : meshLayer, 'FIELD_NAME' : anbun_col , 'FIELD_TYPE': 1,  
+        #              'NEW_FIELD':1,'FORMULA':mesh_exr ,'OUTPUT' :QgsProcessing.TEMPORARY_OUTPUT }
+
+        agar = []
+
+        for field in res7["OUTPUT"].fields():
+
+            agreg = {}
+
+            agreg['input'] = '"' + field.name() + '"'
+
+
+            feedback.pushConsoleInfo( "name "  + field.name() )
+            agreg['name']  = field.name()
+            agreg['aggregate'] = 'first_value'
+
+            agreg['length'] =field.length()
+            agreg['precision'] =field.precision()     
+            agreg['type'] =field.type()   
+
+            if field.name() == anbun_col :
+                 agreg['aggregate'] = 'sum'
+
+            agar.append(agreg)
+
+
+
+        
+        params6 = { 'INPUT' : res7["OUTPUT"], 'GROUP_BY' : meshid_f, 'AGGREGATES': agar, 'OUTPUT' :QgsProcessing.TEMPORARY_OUTPUT }
+        feedback.pushConsoleInfo( "aggregate "  )
+        res8 = processing.run('qgis:aggregate', params6, feedback=feedback)
+
+        if feedback.isCanceled():
+            return {}
+        feedback.pushConsoleInfo( "aggregate OK "  )
+
+    #   レイヤ結合　　qgis:joinattributestable
+        #QgsProject.instance().addMapLayer(res7["OUTPUT"])
+
+        param7 = { 'DISCARD_NONMATCHING' : False, 'FIELD' : meshid_f, 'FIELDS_TO_COPY' : [anbun_col], 'FIELD_2' : meshid_f, 
+             'INPUT' : meshLayer, 
+             'INPUT_2' : res8['OUTPUT'], 'METHOD' : 1, 'OUTPUT' : parameters["OUTPUT"], 'PREFIX' : '' }
+
+
+
+        res9 = processing.run('qgis:joinattributestable', param7, feedback=feedback)
+
+        if feedback.isCanceled():
+            return {}
+        feedback.pushConsoleInfo( "joinattributetable OK"  )
+
+
+
+      #  divide_f = "divide_f"
+
+
+
+      #  params8 = { 'INPUT' : res8["OUTPUT"], 'FIELD_NAME' : divide_f , 'FIELD_TYPE': 1,  
+      #                'NEW_FIELD':1,'FORMULA':QgsExpression('0') ,'OUTPUT' :QgsProcessing.TEMPORARY_OUTPUT }
+
+      #  res9 = processing.run('qgis:fieldcalculator', params8, feedback=feedback)
+
+
+      #  if feedback.isCanceled():
+      #      return {}
+      #  feedback.pushConsoleInfo( "add divide flag OK"  )
+
+    
+
+
+     #  最低値チェック
+     #  ここが < なのか <= なのかはチェックが必要
+        #exp_str = '"' + anbun_col + '" <= ' + str(limit_sample ) + ' and "' + divide_f + '"=0'
+
+        exp_str = '"' + anbun_col + '" <= ' + str(limit_sample ) 
+        feedback.pushConsoleInfo( "exp_str " + exp_str )
+        nexpression  =QgsExpression(exp_str)
+
+        request = QgsFeatureRequest().setFilterExpression(exp_str)
+
+
+        rsLayer = res9["OUTPUT"]
+
+        if type(rsLayer) is str:
+            rsLayer =  QgsVectorLayer(rsLayer, "mesh", "ogr")
+
+        #tgLayer.beginEditCommand("Feature triangulation")
+
+
+        matches = 0
+        for f in rsLayer.getFeatures(request):
+             matches += 1
+
+        #feedback.pushConsoleInfo( "make expression OK"  )
+        #params10 =  { 'INPUT' : res8["OUTPUT"], 'EXPRESSION' : expression , 'METHOD': 0  }
+        #outputs_statv = processing.run('QGIS_stat:Stat_CSVAddressPolygon', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
+
+        #res11 = processing.run('qgis:selectbyexpression', params10, feedback=feedback)
+
+        # 最低値　に達した地物数の算出
+        #scount = res11["OUTPUT"].selectedFeatureCount()
+
+        feedback.pushConsoleInfo( "scount = "+str(matches)  )
+
+        #if scount > 0:　　　　
+        # #  最低値に達したものがある場合
+        # 最低値に達したメッシュのフラグを終了に変更
 
 
         # Return the results of the algorithm. In this case our only result is
@@ -215,8 +465,10 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
         # dictionary, with keys matching the feature corresponding parameter
         # or output names.
 
-   
-        return  res
+        results["OUTPUT"] = res9["OUTPUT"]
+        results["LIMITPOL"] = matches
+
+        return  results
 
 
     def name(self):
@@ -234,7 +486,7 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
         Returns the translated algorithm name, which should be used for any
         user-visible display of the algorithm name.
         """
-        return '行政界メッシュ集計'
+        return '行政界メッシュ集計（面積按分　単一メッシュ)'
 
     def group(self):
         """

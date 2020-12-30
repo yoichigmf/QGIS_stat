@@ -128,6 +128,11 @@ class StatCsvProcessingAlgorithm(QgsProcessingAlgorithm):
             'OUTPUT': parameters['OUTPUT']
         }
         outputs['Gdal_translate'] = processing.run('gdal:convertformat', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
+
+        feedback.setCurrentStep(5)
+        if feedback.isCanceled():
+            return {}
+
         results['OUTPUT'] = outputs['Gdal_translate']['OUTPUT']
         return results
 
