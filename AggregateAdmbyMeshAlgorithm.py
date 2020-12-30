@@ -227,7 +227,7 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
         params3 = { 'INPUT' :  inputLayer, 'FIELD_NAME' : area_column , 'FIELD_TYPE': 0, 'FIELD_LENGTH':12, 'FIELD_PRECISION':5, 
                  'NEW_FIELD':1,'FORMULA':'$area','OUTPUT' :QgsProcessing.TEMPORARY_OUTPUT }
 
-        res3 = processing.run('qgis:fieldcalculator', params3, feedback=feedback )
+        res3 = processing.run('qgis:fieldcalculator', params3, context=context, feedback=feedback ,is_child_algorithm=True)
 
         if feedback.isCanceled():
             return {}
@@ -241,7 +241,7 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
                 'OUTPUT' : QgsProcessing.TEMPORARY_OUTPUT, 'OVERLAY' : res3["OUTPUT"], 'OVERLAY_FIELDS' : [] }
                  #             'OUTPUT' : parameters["OUTPUT"], 'OVERLAY' : res3["OUTPUT"], 'OVERLAY_FIELDS' : [] }
 
-        res2 = processing.run('native:intersection', params2, feedback=feedback)
+        res2 = processing.run('native:intersection', params2,  context=context, feedback=feedback ,is_child_algorithm=True)
         if feedback.isCanceled():
             return {}
 
@@ -252,8 +252,8 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
 
         tgLayer = res2["OUTPUT"]
 
-        #if type(tgLayer) is str:
-        #    tgLayer =  QgsVectorLayer(tgLayer, "intesect", "ogr")
+        if type(tgLayer) is str:
+            tgLayer =  QgsVectorLayer(tgLayer, "intesect", "ogr")
 
         #tgLayer.beginEditCommand("Feature triangulation")
 
@@ -265,10 +265,11 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
         tgLayer.dataProvider().addAttributes([QgsField(ad_areacolumn, QVariant.Double),QgsField(ratio_column, QVariant.Double),QgsField(anbun_col,QVariant.Double)])
         tgLayer.updateFields()
 
+        newFlag = False
         
-        params4 = { 'INPUT' : tgLayer, 'FIELD_NAME' : ad_areacolumn , 'FIELD_TYPE': 0, 'FIELD_LENGTH':12, 
+        params4 = { 'INPUT' : res2["OUTPUT"], 'FIELD_NAME' : ad_areacolumn , 'FIELD_TYPE': 0, 'FIELD_LENGTH':12, 
         #             'FIELD_PRECISION':5, 'NEW_FIELD':1,'FORMULA':'$area','OUTPUT' :parameters["OUTPUT"] }
-                    'FIELD_PRECISION':5, 'NEW_FIELD':False,'FORMULA':'$area','OUTPUT' :QgsProcessing.TEMPORARY_OUTPUT }    
+                    'FIELD_PRECISION':5, 'NEW_FIELD':newFlag,'FORMULA':'$area','OUTPUT' :QgsProcessing.TEMPORARY_OUTPUT }    
 
 
         #for feat  in tgLayer.getFeatures():
@@ -290,7 +291,7 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
         #             'FIELD_PRECISION':5, 'NEW_FIELD':1,'FORMULA':'$area','OUTPUT' :parameters["OUTPUT"] }
         #            'FIELD_PRECISION':5, 'NEW_FIELD':1,'FORMULA':'$area','OUTPUT' :QgsProcessing.TEMPORARY_OUTPUT }
 
-        res5 = processing.run('qgis:fieldcalculator', params4, feedback=feedback)
+        res5 = processing.run('qgis:fieldcalculator', params4,  context=context, feedback=feedback ,is_child_algorithm=True)
         if feedback.isCanceled():
             return {}
         feedback.pushConsoleInfo( "calc area ok " )
@@ -299,8 +300,8 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
         ratio_str = ad_areacolumn + "/" + area_column
         params5 = { 'INPUT' : res5["OUTPUT"], 'FIELD_NAME' :  ratio_column , 'FIELD_TYPE': 0, 'FIELD_LENGTH':12, 
          #            'FIELD_PRECISION':5, 'NEW_FIELD':False,'FORMULA':ratio_str,'OUTPUT' :parameters["OUTPUT"] }
-                    'FIELD_PRECISION':5, 'NEW_FIELD':False,'FORMULA':ratio_str,'OUTPUT' :QgsProcessing.TEMPORARY_OUTPUT }   
-        res6 = processing.run('qgis:fieldcalculator', params5, feedback=feedback)
+                    'FIELD_PRECISION':5, 'NEW_FIELD':newFlag,'FORMULA':ratio_str,'OUTPUT' :QgsProcessing.TEMPORARY_OUTPUT }   
+        res6 = processing.run('qgis:fieldcalculator', params5,  context=context, feedback=feedback ,is_child_algorithm=True)
         if feedback.isCanceled():
             return {}
         feedback.pushConsoleInfo( "calc ratio ok " )
@@ -325,15 +326,17 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
 
      #  按分数値算出
 
-        anbun_col = 'anbun_colum'
+        anbun_col = 'value'
 
         formula_str = aggrefields[0] + " * " + ratio_column
 
         params7 = { 'INPUT' : res6["OUTPUT"], 'FIELD_NAME' : anbun_col , 'FIELD_TYPE': 0, 'FIELD_LENGTH':12, 
-                    # 'FIELD_PRECISION':5, 'NEW_FIELD':False,'FORMULA':formula_str ,'OUTPUT' :parameters["OUTPUT"]  }
-                               'FIELD_PRECISION':5, 'NEW_FIELD':0,'FORMULA':formula_str ,'OUTPUT' :QgsProcessing.TEMPORARY_OUTPUT }
+                    # 'FIELD_PRECISION':5, 'NEW_FIELD':newFlag,'FORMULA':formula_str ,'OUTPUT' :parameters["OUTPUT"]  }
+                               'FIELD_PRECISION':5, 'NEW_FIELD':newFlag,'FORMULA':formula_str ,'OUTPUT' :QgsProcessing.TEMPORARY_OUTPUT }
 
-        res7 = processing.run('qgis:fieldcalculator', params7, feedback=feedback)
+        res7 = processing.run('qgis:fieldcalculator', params7,   context=context, feedback=feedback )
+
+        #        res7 = processing.run('qgis:fieldcalculator', params7,  context=context, feedback=feedback ,is_child_algorithm=True)
         if feedback.isCanceled():
             return {}
         feedback.pushConsoleInfo( "anbun ok " )
@@ -354,7 +357,15 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
 
         agar = []
 
-        for field in res7["OUTPUT"].fields():
+
+        tgLayer = res7["OUTPUT"]
+
+   
+
+        if type(tgLayer) is str:
+            tgLayer =  QgsVectorLayer(tgLayer, "intesect", "ogr")
+
+        for field in tgLayer.fields():
 
             agreg = {}
 
@@ -379,7 +390,7 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
         
         params6 = { 'INPUT' : res7["OUTPUT"], 'GROUP_BY' : meshid_f, 'AGGREGATES': agar, 'OUTPUT' :QgsProcessing.TEMPORARY_OUTPUT }
         feedback.pushConsoleInfo( "aggregate "  )
-        res8 = processing.run('qgis:aggregate', params6, feedback=feedback)
+        res8 = processing.run('qgis:aggregate', params6,  context=context, feedback=feedback ,is_child_algorithm=True)
 
         if feedback.isCanceled():
             return {}
@@ -394,7 +405,7 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
 
 
 
-        res9 = processing.run('qgis:joinattributestable', param7, feedback=feedback)
+        res9 = processing.run('qgis:joinattributestable', param7,  context=context, feedback=feedback ,is_child_algorithm=True)
 
         if feedback.isCanceled():
             return {}
