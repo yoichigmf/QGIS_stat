@@ -493,6 +493,215 @@ def  GetCyuutenXY( x1, y1, x2, y2 ):
 
 
 
+def SplitMeshLayer( mlayer ,  keycolum  ):
+#  InputLayer  メッシュテーブル   
+#  output_table  出力メッシュテーブル  
+#  SplitFlag     フラグが1のメッシュは分割しない 
+#   
+#  return new mesh layer
+#
+     #outputlayer = QgsVectorLayer("Point?crs=EPSG:4326", "layer name you like", "memory")
+
+     if  type(mlayer) is str: 
+          
+          mlayer = QgsVectorLayer(mlayer, "mesh", "ogr")
+
+
+     if mlayer.isValid():
+              print("dmesh Layer load OK")
+     else:
+              print("dmesh Layer load Fail")
+              print( "dmesh=" + mlayer.name() );
+              sys.exit()
+ 
+
+ 
+ 
+     crsstr = mlayer.crs().authid()
+ 
+ 
+     #   作業結果出力レイヤ
+     
+     vectL = 'Polygon?crs=' + crsstr
+     
+     vl1 = QgsVectorLayer( vectL , "temporary_mesh", "memory")
+                 
+                 
+     if not vl1:
+              print("Virtual Layer failed to load!")  
+              sys.exit()  
+     #else:
+     #         print( out_tb )
+              
+     #vl1.setCrs( mlayer.crs()  )
+                         
+     pr1 = vl1.dataProvider()
+                      
+            #  フィールド定義
+     pr1.addAttributes([
+                    QgsField(keycolum, QVariant.String) ])
+     #               QgsField(divcolumn,  QVariant.Int)])
+     
+             
+     vl1.updateFields() # 
+     
+     vl1.beginEditCommand("Add Polygons")
+                    
+     features = mlayer.getFeatures()
+
+
+     for feature in features:
+
+
+         code = feature[ keycolum]
+         #divide_f = feature[ divcolumn ]
+         
+         divide_f = 0
+
+         #print( 'code =' + code+ ' divide=' + str(divide_f) )
+         geom = feature.geometry()
+         geomSingleType = QgsWkbTypes.isSingleType(geom.wkbType())
+         
+         if divide_f == 0:
+         
+              if geom.type() == QgsWkbTypes.PolygonGeometry:
+         
+                  if geomSingleType:
+                        x = geom.asPolygon()
+              
+
+                   #print("Polygon: ", x, "Area: ", geom.area())
+                   
+                   
+                        for xp in x:
+                         #print("xp:",xp )
+                         
+                         #for xxp in xp:
+                         #     print("xxp:",xxp)
+                       
+                         #    座標の場所を判定して位置関係を正規化したほうがいいかも
+                         #
+                         
+                              p0_1 =  GetCyuuten( xp[0], xp[1] )
+                              p1_2 =  GetCyuuten( xp[1], xp[2] )       
+                              p2_3 =  GetCyuuten( xp[2], xp[3] )    
+                              p3_4 =  GetCyuuten( xp[3], xp[4] ) 
+                              pC_C =  GetCyuuten( p0_1, p2_3 )                          
+                              
+
+                         
+                        
+                     
+                         #    新しいキーコード
+                              ncode1 = code + '-01'
+                         
+                              Polygon1 = QgsGeometry.fromPolygonXY([[QgsPointXY(xp[0].x(), xp[0].y()),
+                                         QgsPointXY(p0_1.x(), p0_1.y()), QgsPointXY(pC_C.x(), pC_C.y()), QgsPointXY(p3_4.x(), p3_4.y())]])
+                                         
+                                         
+                          # add a feature
+                              fet = QgsFeature(pr1.fields())
+                          
+                              fet.setGeometry(Polygon1)
+                                        
+                                                                        
+                              fet[keycolum] =ncode1
+                          #    fet[divcolumn] = divide_f 
+                         #  新しい feature を作って別レイヤに格納する
+                              retc = pr1.addFeatures([fet])
+                            
+                         #print("add new")
+                         #print( retc )      
+                                
+                        #    新しいキーコード
+                              ncode2 = code + '-02'       
+                              Polygon2 = QgsGeometry.fromPolygonXY([[
+                                         QgsPointXY(p0_1.x(), p0_1.y()), QgsPointXY(xp[1].x(), xp[1].y()), QgsPointXY(p1_2.x(), p1_2.y()), QgsPointXY(pC_C.x(), pC_C.y())]])     
+                                         
+                                         
+                         
+                              fet2 = QgsFeature(pr1.fields())
+                          
+                              fet2.setGeometry(Polygon2)
+                                        
+                                                                        
+                              fet2[keycolum] =ncode2
+                           #   fet2[divcolumn] = divide_f 
+                         #  新しい feature を作って別レイヤに格納する
+                              retc = pr1.addFeatures([fet2])
+                            
+                                 
+                        #    新しいキーコード
+                              ncode3 = code + '-03'       
+                              Polygon3 = QgsGeometry.fromPolygonXY([[
+                                         QgsPointXY(pC_C.x(), pC_C.y()), QgsPointXY(p1_2.x(), p1_2.y()), QgsPointXY(xp[2].x(), xp[2].y()), QgsPointXY(p2_3.x(), p2_3.y())]])     
+                                         
+                                         
+                         
+                              fet3 = QgsFeature(pr1.fields())
+                          
+                              fet3.setGeometry(Polygon3)
+                                        
+                                                                        
+                              fet3[keycolum] =ncode3
+                           #   fet3[divcolumn] = divide_f 
+                         #  新しい feature を作って別レイヤに格納する
+                              retc = pr1.addFeatures([fet3])                        
+                         
+  
+  
+  
+                        #    新しいキーコード
+                              ncode4 = code + '-04'       
+                              Polygon4 = QgsGeometry.fromPolygonXY([[
+                                         QgsPointXY(p3_4.x(), p3_4.y()), QgsPointXY(pC_C.x(), pC_C.y()), QgsPointXY(p2_3.x(), p2_3.y()) , QgsPointXY(xp[3].x(), xp[3].y())]])     
+                                         
+                                         
+                         
+                              fet4 = QgsFeature(pr1.fields())
+                          
+                              fet4.setGeometry(Polygon4)
+                                        
+                                                                        
+                              fet4[keycolum] =ncode4
+                           #   fet4[divcolumn] = divide_f 
+                         #  新しい feature を作って別レイヤに格納する
+                              retc = pr1.addFeatures([fet4])                  
+                         
+                         
+                                                                
+
+                         #print(Polygon1)
+                        # print(Polygon2)
+                         
+                         
+                         #Poly
+
+                         #feat.setGeometry( QgsGeometry.fromPolygonXY([QgsPointXY(546016, 4760165), p2, p3]))
+                         #qPolygon1 = QgsGeometry.fromPolygonXY([ xp[0],p0_1, pC_C,xp[0]])
+                         
+                         #print( qPolygon1 )
+                              
+                  #   一点目 2点目の中点を求める   2
+                  
+                  else:       
+                        x = geom.asMultiPolygon()
+                   #print("MultiPolygon: ", x, "Area: ", geom.area())
+              else:
+                   print("geometry is not polygon!")
+                   
+         #else:    #  分割不要ポリゴンはそのまま書き込む
+          #    retc = pr1.addFeatures([feature])              
+     
+     vl1.updateExtents()     
+     vl1.endEditCommand()
+     vl1.commitChanges()       
+
+     return vl1
+
+     
+
+
 #
 #  メッシュ分割
 #

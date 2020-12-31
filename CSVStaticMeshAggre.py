@@ -62,6 +62,9 @@ import processing
 import sqlite3
 import csv
 
+from .mod import  agtools
+#SplitMeshLayer( last_output ,  meshid  )
+
 class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
     """
     This is an example algorithm that takes a vector layer and
@@ -199,6 +202,36 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
         #    self.ENCODING,
         #    context
         #)
+        meshLayer = self.parameterAsVectorLayer(
+            parameters,
+            "meshlayer",
+            context
+        )
+        if meshLayer  is None:
+            raise QgsProcessingException(self.tr('mesh layer missed'))
+
+        meshidfields = self.parameterAsFields  (
+             parameters,
+             'meshid',
+             context
+        )
+
+
+        limit_sample = self.parameterAsInt ( parameters,
+             'limit_sample',
+             context)
+
+        maxdivide = self.parameterAsInt ( parameters,
+             'maxdivide',
+             context)
+
+ 
+        uneven_div = self.parameterAsInt ( parameters,
+             'uneven_div',
+             context)
+
+                   
+
 
         feedback.setCurrentStep(1)
         if feedback.isCanceled():
@@ -221,8 +254,86 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
         if feedback.isCanceled():
             return {}
 
+        statv = outputs_statv["OUTPUT"]
+        meshid = meshidfields[0]
+        param1 = { 'INPUT' : statv, 
+                 'OUTPUT' : QgsProcessing.TEMPORARY_OUTPUT, 'aggrefield' : 'count', 
+                'limit_sample' : limit_sample , 'meshid' : meshid,
+                'meshlayer' : meshLayer, 'uneven_div' : uneven_div}
+        
         #parameters['OUTPUT']
+        #     メッシュ集計
+        res1 = processing.run('QGIS_stat:AggregateAdmbyMeshAlgorithm', param1, context=context, feedback=feedback, is_child_algorithm=True)
 
+        if feedback.isCanceled():
+            return {}
+
+
+        
+
+        numberof_under_limit = res1["LIMITPOL"]
+
+ #  分割回数ループ
+
+                        # レイヤをGeoPackage化
+        alg_paramsg = {
+                           'LAYERS': res1["OUTPUT"],
+                           'OVERWRITE': True,
+                          'SAVE_STYLES': False,
+                           'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
+                           }
+        retg1 = processing.run('native:package', alg_paramsg, context=context, feedback=feedback, is_child_algorithm=True)
+        last_output = retg1["OUTPUT"]
+
+        new_mesh = retg1["OUTPUT"]
+
+
+
+
+        for divide_c in range(1,maxdivide ):
+
+            #   集計結果が最小サンプルより小さいものがある場合
+            if numberof_under_limit > 0:
+                   #  均等分割の場合は終了
+                   if not uneven_div:
+
+                       break
+
+                   #  不均等分割の場合は終了終了データを保全  それ以外のメッシュの分割
+                   #else:
+
+            #  最小サンプルより小さいものが無い場合はメッシュ分割
+            else:
+                   new_mesh = agtools.SplitMeshLayer( last_output ,  meshid  )
+
+
+             
+            #  再度メッシュ集計
+                   param2 = { 'INPUT' : statv, 
+                        'OUTPUT' : QgsProcessing.TEMPORARY_OUTPUT, 'aggrefield' : 'count', 
+                        'limit_sample' : limit_sample , 'meshid' : meshid,
+                        'meshlayer' : new_mesh, 'uneven_div' : uneven_div}
+
+                   res2 = processing.run('QGIS_stat:AggregateAdmbyMeshAlgorithm', param2, context=context, feedback=feedback, is_child_algorithm=True)
+
+                   numberof_under_limit = res2["LIMITPOL"]
+
+                   if numberof_under_limit == 0:
+
+                       
+                       # レイヤをGeoPackage化
+                       alg_paramsg2 = {
+                           'LAYERS': res2["OUTPUT"],
+                           'OVERWRITE': True,
+                          'SAVE_STYLES': False,
+                           'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
+                           }
+                       retg2 = processing.run('native:package', alg_paramsg2, context=context, feedback=feedback, is_child_algorithm=True)
+                       last_output = retg2["OUTPUT"]
+
+
+
+        
         # Return the results of the algorithm. In this case our only result is
         # the feature sink which contains the processed features, but some
         # algorithms may return multiple feature sinks, calculated numeric
@@ -230,7 +341,11 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
         # dictionary, with keys matching the feature corresponding parameter
         # or output names.
 
-        results["OUTPUT"] = outputs_statv["OUTPUT"] 
+       
+
+
+
+        results["OUTPUT"] = last_output
         return  results
 
 
