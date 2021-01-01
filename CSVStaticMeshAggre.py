@@ -138,7 +138,7 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
                           defaultValue=3))
 
         self.addParameter(QgsProcessingParameterNumber('maxdivide', '最大分割回数',
-                          defaultValue=8))
+                          defaultValue=4))
 
         self.addParameter(QgsProcessingParameterBoolean('uneven_div', '不均等分割',
                           defaultValue=False))
@@ -258,8 +258,8 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
         meshid = meshidfields[0]
         param1 = { 'INPUT' : statv, 
                  'OUTPUT' : QgsProcessing.TEMPORARY_OUTPUT, 'aggrefield' : 'count', 
-                'limit_sample' : limit_sample , 'meshid' : meshid,
-                'meshlayer' : meshLayer, 'uneven_div' : uneven_div}
+                 'meshid' : meshid,
+                'meshlayer' : meshLayer}
         
         #parameters['OUTPUT']
         #     メッシュ集計
@@ -269,9 +269,9 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
             return {}
 
 
-        
+        numberof_under_limit = 0
 
-        numberof_under_limit = res1["LIMITPOL"]
+        #numberof_under_limit = res1["LIMITPOL"]
 
  #  分割回数ループ
 
@@ -287,7 +287,21 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
 
         new_mesh = retg1["OUTPUT"]
 
+        mesh_layb = retg1["OUTPUT"]
 
+        if type(mesh_layb) is str:
+             mesh_layb =    QgsVectorLayer(mesh_layb, "mesh", "ogr")
+
+        numberof_under_limit = 0
+
+  
+
+        #    limit 値より小さい値のポリゴン数算出
+        for f in  mesh_layb.getFeatures():
+            # feedback.pushConsoleInfo( "value  " +str( f["value"])  )
+             if not f["value"] is None:
+                 if f["value"] > 0 and f["value"] <  limit_sample :
+                     numberof_under_limit += 1
 
 
         for divide_c in range(1,maxdivide ):
@@ -311,24 +325,42 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
             #  再度メッシュ集計
                    param2 = { 'INPUT' : statv, 
                         'OUTPUT' : QgsProcessing.TEMPORARY_OUTPUT, 'aggrefield' : 'count', 
-                        'limit_sample' : limit_sample , 'meshid' : meshid,
-                        'meshlayer' : new_mesh, 'uneven_div' : uneven_div}
+                         'meshid' : meshid,
+                        'meshlayer' : new_mesh}
 
                    res2 = processing.run('QGIS_stat:AggregateAdmbyMeshAlgorithm', param2, context=context, feedback=feedback, is_child_algorithm=True)
 
-                   numberof_under_limit = res2["LIMITPOL"]
-
-                   if numberof_under_limit == 0:
-
-                       
-                       # レイヤをGeoPackage化
-                       alg_paramsg2 = {
+                   #numberof_under_limit = res2["LIMITPOL"]
+                   numberof_under_limit = 0
+                  # レイヤをGeoPackage化
+                   alg_paramsg2 = {
                            'LAYERS': res2["OUTPUT"],
                            'OVERWRITE': True,
                           'SAVE_STYLES': False,
                            'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
                            }
-                       retg2 = processing.run('native:package', alg_paramsg2, context=context, feedback=feedback, is_child_algorithm=True)
+                   retg2 = processing.run('native:package', alg_paramsg2, context=context, feedback=feedback, is_child_algorithm=True)
+
+                   mesh_layb = retg2["OUTPUT"]
+
+                   if type(mesh_layb) is str:
+                       mesh_layb =    QgsVectorLayer(mesh_layb, "mesh", "ogr")
+
+      
+                  
+                   #features = mesh_layb.selectedFeatures()
+                   #feedback.pushConsoleInfo( "feature count  " +str( len(features))  )
+                   
+                   for f in  mesh_layb.getFeatures():
+                    #   feedback.pushConsoleInfo( "value  " +str( f["value"])  )
+                       if not f["value"] is None:
+                           if f["value"] > 0 and f["value"] <  limit_sample :
+                               numberof_under_limit += 1
+
+
+
+
+                   if numberof_under_limit == 0:
                        last_output = retg2["OUTPUT"]
 
 
@@ -342,10 +374,17 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
         # or output names.
 
        
+       # フォーマット変換（gdal_translate）
+        alg_params = {
+            'INPUT': last_output,
+            'OPTIONS': '',
+            'OUTPUT': parameters['OUTPUT']
+        }
+        ocv = processing.run('gdal:convertformat', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
 
 
 
-        results["OUTPUT"] = last_output
+        results["OUTPUT"] = ocv["OUTPUT"]
         return  results
 
 

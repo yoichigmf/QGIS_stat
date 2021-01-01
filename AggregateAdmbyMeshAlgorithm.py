@@ -118,14 +118,14 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
                          type=QgsProcessingParameterField.String, parentLayerParameterName='meshlayer', optional=False, allowMultiple=False))
 
 
-        self.addParameter(QgsProcessingParameterNumber('limit_sample', '最小サンプル数',
-                          defaultValue=3))
+        #self.addParameter(QgsProcessingParameterNumber('limit_sample', '最小サンプル数',
+        #                  defaultValue=3))
 
         #self.addParameter(QgsProcessingParameterNumber('maxdivide', '最大分割回数',
         #                  defaultValue=8))
 
-        self.addParameter(QgsProcessingParameterBoolean('uneven_div', '不均等分割',
-                          defaultValue=False))
+        #self.addParameter(QgsProcessingParameterBoolean('uneven_div', '不均等分割',
+        #                  defaultValue=False))
 
         #self.addParameter(QgsProcessingParameterNumber('current_div', 'カレント分割回数',
         #                  defaultValue=1))
@@ -202,9 +202,9 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
              context
         )
 
-        limit_sample = self.parameterAsInt ( parameters,
-             'limit_sample',
-             context)
+        #limit_sample = self.parameterAsInt ( parameters,
+        #     'limit_sample',
+        #     context)
 
       
 
@@ -434,24 +434,25 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
      #  ここが < なのか <= なのかはチェックが必要
         #exp_str = '"' + anbun_col + '" <= ' + str(limit_sample ) + ' and "' + divide_f + '"=0'
 
-        exp_str = '"' + anbun_col + '" <= ' + str(limit_sample ) 
-        feedback.pushConsoleInfo( "exp_str " + exp_str )
-        nexpression  =QgsExpression(exp_str)
+        #exp_str = '"' + anbun_col + '" <= ' + str(limit_sample ) 
+        #feedback.pushConsoleInfo( "exp_str " + exp_str )
+        #nexpression  =QgsExpression(exp_str)
 
-        request = QgsFeatureRequest().setFilterExpression(exp_str)
+        #request = QgsFeatureRequest().setFilterExpression(exp_str)
 
 
-        rsLayer = res9["OUTPUT"]
+        #rsLayer = res9["OUTPUT"]
 
-        if type(rsLayer) is str:
-            rsLayer =  QgsVectorLayer(rsLayer, "mesh", "ogr")
+        #if type(rsLayer) is str:
+       #     rsLayer =  QgsVectorLayer(rsLayer, "mesh", "memory")
 
         #tgLayer.beginEditCommand("Feature triangulation")
 
 
-        matches = 0
-        for f in rsLayer.getFeatures(request):
-             matches += 1
+       # matches = 0
+        #for f in rsLayer.getFeatures():
+       #      feedback.pushConsoleInfo( "value  " +str( f[anbun_col])  )
+             #matches += 1
 
         #feedback.pushConsoleInfo( "make expression OK"  )
         #params10 =  { 'INPUT' : res8["OUTPUT"], 'EXPRESSION' : expression , 'METHOD': 0  }
@@ -462,7 +463,7 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
         # 最低値　に達した地物数の算出
         #scount = res11["OUTPUT"].selectedFeatureCount()
 
-        feedback.pushConsoleInfo( "scount = "+str(matches)  )
+        #feedback.pushConsoleInfo( "scount = "+str(matches)  )
 
         #if scount > 0:　　　　
         # #  最低値に達したものがある場合
@@ -477,7 +478,7 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
         # or output names.
 
         results["OUTPUT"] = res9["OUTPUT"]
-        results["LIMITPOL"] = matches
+       # results["LIMITPOL"] = matches
 
         return  results
 
