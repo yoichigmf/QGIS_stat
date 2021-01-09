@@ -324,8 +324,163 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
 
         next_output = None
 
+
+                    #   集計結果が最小サンプルより小さいものがある場合
+        if numberof_under_limit > 0:
+                   #  均等分割の場合は終了
+            if uneven_div:
+
+
+                rmid = []
+                for tgid in ( lower_ids):
+                    feedback.pushConsoleInfo( "lower id  " +str( tgid )  )
+
+                           #  next_output   code   の下3桁　削除   C27210-02    -> C27210   が last_output の code 番号
+                           #  next_output  では last_output  が同じ番号の最大4メッシュを削除する
+
+                           # リミットより小さいレコードは旧レコードを退避
+                           #  リミットにひっかかるレコードを再処理用リストから削除（同一親メッシュのものも削除）
+                       #   不均等分割でリミット以下のデータがある場合は last_output -> 分割不能抽出   next_output  分割不能削除  next_output -> last_output 代入
+                    parent_code = tgid[0:-3]
+
+                           
+                    rmid.append(parent_code)
+
+                addfeatures = []
+
+                    #if type(last_output) is str:
+                    #    last_output =  QgsVectorLayer(last_output, "mesh", "ogr")
+
+
+
+                alg_paramsg_n = {
+                           'LAYERS': last_output,
+                           'OVERWRITE': False,
+                          'SAVE_STYLES': False,
+                           'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
+                           }
+                lmesh  = processing.run('native:package', alg_paramsg_n, context=context, feedback=feedback, is_child_algorithm=True)  
+
+
+                    #last_output.removeSelection()
+                last_output = lmesh["OUTPUT"]
+
+                if type(last_output) is str:
+                    last_output =  QgsVectorLayer(last_output, "mesh", "ogr")
+
+                last_output.selectAll()
+
+
+                for lf in  last_output.getFeatures():
+
+                    for pcode in ( rmid ):
+                        #    feedback.pushConsoleInfo( "pcode  " + pcode+ " meshid =" + lf[meshid]  )
+                        if lf[meshid]== pcode:
+                            lf["fid"] = None
+                            addfeatures.append(lf)
+                            feedback.pushConsoleInfo( "add feature   " + pcode  )
+
+
+                resLayer.dataProvider().addFeatures( addfeatures)
+
+
+
+                deleteFeatures = []
+
+                if type(next_output) is str:
+                    next_output =  QgsVectorLayer(next_output, "mesh", "ogr")
+
+                for nf in  next_output.getFeatures():
+
+                    for pcode in ( rmid ):
+                        if nf[meshid][0:-3]== pcode:
+                            deleteFeatures.append(nf.id())
+                            feedback.pushConsoleInfo( "delete id  " +str( pcode )  )
+                                    
+                next_output.dataProvider().deleteFeatures(deleteFeatures)
+
+
+                last_output = next_output
+
+
          #  分割回数ループ
         for divide_c in range(1,maxdivide ):
+
+            if numberof_under_limit > 0:
+                   #  均等分割の場合は終了
+                if not uneven_div:
+                    break
+#------------------------------------------------------------------------------------------------------------------------
+
+            #  最小サンプルより小さいものが無い場合はメッシュ分割
+            #else:
+
+
+            if type( last_output ) is str:
+                feedback.pushConsoleInfo( "last output " + last_output  )   
+            else:
+                 feedback.pushConsoleInfo( "last output " + last_output.name()  )   
+
+            alg_paramsg_m = {
+                           'LAYERS': last_output,
+                           'OVERWRITE': True,
+                          'SAVE_STYLES': False,
+                           'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
+                           }
+            spmesh  = processing.run('native:package', alg_paramsg_m, context=context, feedback=feedback, is_child_algorithm=True)                               
+
+            new_mesh = agtools.SplitMeshLayer( spmesh["OUTPUT"] ,  meshid  )
+
+            # statv  行政界別集計データ
+             
+            #  再度メッシュ集計
+            param2 = { 'INPUT' : statv, 
+                        'OUTPUT' : QgsProcessing.TEMPORARY_OUTPUT, 'aggrefield' : 'count', 
+                         'meshid' : meshid,
+                        'meshlayer' : new_mesh}
+
+            res2 = processing.run('QGIS_stat:AggregateAdmbyMeshAlgorithm', param2, context=context, feedback=feedback, is_child_algorithm=True)
+
+                   #numberof_under_limit = res2["LIMITPOL"]
+            numberof_under_limit = 0
+                  # レイヤをGeoPackage化
+            alg_paramsg2 = {
+                           'LAYERS': res2["OUTPUT"],
+                           'OVERWRITE': True,
+                          'SAVE_STYLES': False,
+                           'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
+                           }
+            retg2 = processing.run('native:package', alg_paramsg2, context=context, feedback=feedback, is_child_algorithm=True)
+
+            mesh_layb = retg2["OUTPUT"]
+
+            if type(mesh_layb) is str:
+                mesh_layb =    QgsVectorLayer(mesh_layb, "mesh", "ogr")
+
+      
+                  
+                   #features = mesh_layb.selectedFeatures()
+                   #feedback.pushConsoleInfo( "feature count  " +str( len(features))  )
+            lower_ids = []
+            for f in  mesh_layb.getFeatures():
+                    #   feedback.pushConsoleInfo( "value  " +str( f["value"])  )
+                if not f["value"] is None:
+                    if f["value"] > 0 and f["value"] <  limit_sample :
+                        numberof_under_limit += 1
+                        lower_ids.append( f[meshid])
+
+
+
+
+            if numberof_under_limit == 0:
+                last_output = res2["OUTPUT"]
+                next_output = retg2["OUTPUT"]
+            else:
+                       #   不均等分割でリミット以下のデータがある場合は last_output -> 分割不能抽出   next_output  分割不能削除  next_output -> last_output 代入
+               # last_output = res2["OUTPUT"]
+                next_output = retg2["OUTPUT"]
+
+
 
             #   集計結果が最小サンプルより小さいものがある場合
             if numberof_under_limit > 0:
@@ -406,77 +561,6 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
 
 
                     last_output = next_output
-
-
-
-            #  最小サンプルより小さいものが無い場合はメッシュ分割
-            #else:
-
-
-            if type( last_output ) is str:
-                feedback.pushConsoleInfo( "last output " + last_output  )   
-            else:
-                 feedback.pushConsoleInfo( "last output " + last_output.name()  )   
-
-            alg_paramsg_m = {
-                           'LAYERS': last_output,
-                           'OVERWRITE': True,
-                          'SAVE_STYLES': False,
-                           'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
-                           }
-            spmesh  = processing.run('native:package', alg_paramsg_m, context=context, feedback=feedback, is_child_algorithm=True)                               
-
-            new_mesh = agtools.SplitMeshLayer( spmesh["OUTPUT"] ,  meshid  )
-
-            # statv  行政界別集計データ
-             
-            #  再度メッシュ集計
-            param2 = { 'INPUT' : statv, 
-                        'OUTPUT' : QgsProcessing.TEMPORARY_OUTPUT, 'aggrefield' : 'count', 
-                         'meshid' : meshid,
-                        'meshlayer' : new_mesh}
-
-            res2 = processing.run('QGIS_stat:AggregateAdmbyMeshAlgorithm', param2, context=context, feedback=feedback, is_child_algorithm=True)
-
-                   #numberof_under_limit = res2["LIMITPOL"]
-            numberof_under_limit = 0
-                  # レイヤをGeoPackage化
-            alg_paramsg2 = {
-                           'LAYERS': res2["OUTPUT"],
-                           'OVERWRITE': True,
-                          'SAVE_STYLES': False,
-                           'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
-                           }
-            retg2 = processing.run('native:package', alg_paramsg2, context=context, feedback=feedback, is_child_algorithm=True)
-
-            mesh_layb = retg2["OUTPUT"]
-
-            if type(mesh_layb) is str:
-                mesh_layb =    QgsVectorLayer(mesh_layb, "mesh", "ogr")
-
-      
-                  
-                   #features = mesh_layb.selectedFeatures()
-                   #feedback.pushConsoleInfo( "feature count  " +str( len(features))  )
-            lower_ids = []
-            for f in  mesh_layb.getFeatures():
-                    #   feedback.pushConsoleInfo( "value  " +str( f["value"])  )
-                if not f["value"] is None:
-                    if f["value"] > 0 and f["value"] <  limit_sample :
-                        numberof_under_limit += 1
-                        lower_ids.append( f[meshid])
-
-
-
-
-            if numberof_under_limit == 0:
-                last_output = res2["OUTPUT"]
-                next_output = retg2["OUTPUT"]
-            else:
-                       #   不均等分割でリミット以下のデータがある場合は last_output -> 分割不能抽出   next_output  分割不能削除  next_output -> last_output 代入
-               # last_output = res2["OUTPUT"]
-                next_output = retg2["OUTPUT"]
-
 
 
         
