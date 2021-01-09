@@ -381,6 +381,7 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
                         for pcode in ( rmid ):
                         #    feedback.pushConsoleInfo( "pcode  " + pcode+ " meshid =" + lf[meshid]  )
                             if lf[meshid]== pcode:
+                                lf["fid"] = None
                                 addfeatures.append(lf)
                                 feedback.pushConsoleInfo( "add feature   " + pcode  )
 
@@ -509,7 +510,8 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
 
             for lf in  last_output.getFeatures():
 
-
+                feedback.pushConsoleInfo( "add features  meshid =" + lf[meshid]  )
+                lf["fid"] = None
                 addfeatures.append(lf)
 
 
