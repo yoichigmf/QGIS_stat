@@ -61,7 +61,7 @@ class QGISStatProcessingProvider(QgsProcessingProvider):
         """
         self.addAlgorithm(CSVtoStatProcessingAlgorithm())
         self.addAlgorithm(StatCsvProcessingAlgorithm())
-        self.addAlgorithm(CreateSumSqlProcessingAlgorithm())
+        #self.addAlgorithm(CreateSumSqlProcessingAlgorithm())
         self.addAlgorithm(CSVStatMeshAggreProcessingAlgorithm())
         self.addAlgorithm(AggregateAdmbyMeshAlgorithm())
         #self.addAlgorithm(AggregateAdmbyMeshMainAlgorithm())
