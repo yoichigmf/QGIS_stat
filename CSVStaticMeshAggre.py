@@ -298,8 +298,10 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
         crs_str = mesh_layb.crs()
 
         layerURI = "Polygon?crs=" + crs_str.authid()
-        feedback.pushConsoleInfo( "work layer  " + layerURI  )
+        #feedback.pushConsoleInfo( "work layer  " + layerURI  )
         resLayer = QgsVectorLayer(layerURI, "mesh_result", "memory")
+
+        appended = {}
 
         adfields = []
         for field in mesh_layb.fields():
@@ -313,11 +315,13 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
 
         lower_ids = []
 
+        value_column = "value"
+
         #    limit 値より小さい値のポリゴン数算出
         for f in  mesh_layb.getFeatures():
             # feedback.pushConsoleInfo( "value  " +str( f["value"])  )
-            if not f["value"] is None:
-                if f["value"] > 0 and f["value"] <  limit_sample :
+            if not f[value_column] is None:
+                if f[value_column] > 0 and f[value_column] <  limit_sample :
                     numberof_under_limit += 1
                     lower_ids.append( f[meshid])
 
@@ -348,9 +352,7 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
 
                 addfeatures = []
 
-                    #if type(last_output) is str:
-                    #    last_output =  QgsVectorLayer(last_output, "mesh", "ogr")
-
+ 
 
 
                 alg_paramsg_n = {
@@ -362,7 +364,6 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
                 lmesh  = processing.run('native:package', alg_paramsg_n, context=context, feedback=feedback, is_child_algorithm=True)  
 
 
-                    #last_output.removeSelection()
                 last_output = lmesh["OUTPUT"]
 
                 if type(last_output) is str:
@@ -377,8 +378,15 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
                         #    feedback.pushConsoleInfo( "pcode  " + pcode+ " meshid =" + lf[meshid]  )
                         if lf[meshid]== pcode:
                             lf["fid"] = None
-                            addfeatures.append(lf)
-                            feedback.pushConsoleInfo( "add feature   " + pcode  )
+                            if lf[value_column] is None:
+                                lf[value_column]  = 0
+
+                            if lf[meshid]  not in appended :
+
+                                addfeatures.append(lf)
+                                appended[lf[meshid]]  = lf
+                                 
+                     #       feedback.pushConsoleInfo( "add feature   " + pcode  )
 
 
                 resLayer.dataProvider().addFeatures( addfeatures)
@@ -464,8 +472,8 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
             lower_ids = []
             for f in  mesh_layb.getFeatures():
                     #   feedback.pushConsoleInfo( "value  " +str( f["value"])  )
-                if not f["value"] is None:
-                    if f["value"] > 0 and f["value"] <  limit_sample :
+                if not f[value_column] is None:
+                    if f[value_column] > 0 and f[value_column] <  limit_sample :
                         numberof_under_limit += 1
                         lower_ids.append( f[meshid])
 
@@ -537,8 +545,19 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
                         #    feedback.pushConsoleInfo( "pcode  " + pcode+ " meshid =" + lf[meshid]  )
                             if lf[meshid]== pcode:
                                 lf["fid"] = None
-                                addfeatures.append(lf)
-                                feedback.pushConsoleInfo( "add feature   " + pcode  )
+
+                                if lf[value_column] is None:
+                                    lf[value_column] = 0
+
+                                
+                                if lf[meshid]  not in appended :
+
+                                    addfeatures.append(lf)
+                                    appended[lf[meshid]]  = lf
+
+
+                                   #addfeatures.append(lf)
+                                    feedback.pushConsoleInfo( "add feature   " + pcode  )
 
 
                     resLayer.dataProvider().addFeatures( addfeatures)
@@ -591,12 +610,22 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
 
                 last_output.selectAll()
 
+            addfeatures = []
 
             for lf in  last_output.getFeatures():
 
                 feedback.pushConsoleInfo( "add features  meshid =" + lf[meshid]  )
                 lf["fid"] = None
-                addfeatures.append(lf)
+                if lf[value_column] is None:
+                    lf[value_column]=0
+
+
+                if lf[meshid]  not in appended:
+
+                    addfeatures.append(lf)
+                    appended[lf[meshid]]  = lf
+
+                #addfeatures.append(lf)
 
 
 
