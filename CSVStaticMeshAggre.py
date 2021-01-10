@@ -378,8 +378,8 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
                         #    feedback.pushConsoleInfo( "pcode  " + pcode+ " meshid =" + lf[meshid]  )
                         if lf[meshid]== pcode:
                             lf["fid"] = None
-                            if lf[value_column] is None:
-                                lf[value_column]  = 0
+                            if not lf[value_column] :
+                                lf[value_column]  = 0.0
 
                             if lf[meshid]  not in appended :
 
@@ -546,8 +546,8 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
                             if lf[meshid]== pcode:
                                 lf["fid"] = None
 
-                                if lf[value_column] is None:
-                                    lf[value_column] = 0
+                                if not lf[value_column] :
+                                    lf[value_column] = 0.0
 
                                 
                                 if lf[meshid]  not in appended :
@@ -616,8 +616,8 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
 
                 feedback.pushConsoleInfo( "add features  meshid =" + lf[meshid]  )
                 lf["fid"] = None
-                if lf[value_column] is None:
-                    lf[value_column]=0
+                if not lf[value_column]:
+                    lf[value_column]=0.0
 
 
                 if lf[meshid]  not in appended:
