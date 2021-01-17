@@ -241,6 +241,7 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
                 'OUTPUT' : QgsProcessing.TEMPORARY_OUTPUT, 'OVERLAY' : res3["OUTPUT"], 'OVERLAY_FIELDS' : [] }
                  #             'OUTPUT' : parameters["OUTPUT"], 'OVERLAY' : res3["OUTPUT"], 'OVERLAY_FIELDS' : [] }
 
+#      ここはIntersectではなくて union
         res2 = processing.run('native:intersection', params2,  context=context, feedback=feedback ,is_child_algorithm=True)
         if feedback.isCanceled():
             return {}

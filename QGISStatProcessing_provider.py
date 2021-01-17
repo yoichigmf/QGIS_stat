@@ -36,8 +36,11 @@ from .StatCSVProcessingAlgorithm import StatCsvProcessingAlgorithm
 from .CreateSumSqlProcessingAlgoritm import CreateSumSqlProcessingAlgorithm
 from .CSVStaticMeshAggre  import CSVStatMeshAggreProcessingAlgorithm
 from .AggregateAdmbyMeshAlgorithm import AggregateAdmbyMeshAlgorithm
-#from .AggregateAdmbyMeshMainAlgorithm import AggregateAdmbyMeshMainAlgorithm
 
+
+from .CSVStaticMeshAggrePop import CSVStatMeshAggrePopProcessingAlgorithm
+
+from .CalcPopfromMeshAlgorithm import CalcPopfromMeshAlgorithm
 
 
 class QGISStatProcessingProvider(QgsProcessingProvider):
@@ -64,7 +67,10 @@ class QGISStatProcessingProvider(QgsProcessingProvider):
         #self.addAlgorithm(CreateSumSqlProcessingAlgorithm())
         self.addAlgorithm(CSVStatMeshAggreProcessingAlgorithm())
         self.addAlgorithm(AggregateAdmbyMeshAlgorithm())
-        #self.addAlgorithm(AggregateAdmbyMeshMainAlgorithm())
+        self.addAlgorithm(CSVStatMeshAggrePopProcessingAlgorithm())
+
+        self.addAlgorithm(CalcPopfromMeshAlgorithm())
+        
 
         # add additional algorithms here
         # self.addAlgorithm(MyOtherAlgorithm())
