@@ -108,6 +108,11 @@ class CSVtoStatProcessingAlgorithm(QgsProcessingAlgorithm):
 
 
 
+
+        #self.addParameter(self
+        #)
+
+
         # We add a feature sink in which to store our processed features (this
         # usually takes the form of a newly created vector layer when the
         # algorithm is run in QGIS).
@@ -196,7 +201,7 @@ class CSVtoStatProcessingAlgorithm(QgsProcessingAlgorithm):
 
         fields = QgsFields()
         fields.append(QgsField("Address", QVariant.String))
-        fields.append(QgsField("count", QVariant.Int))
+        fields.append(QgsField("snum", QVariant.Int))
 
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context,
                                                fields )
@@ -226,7 +231,7 @@ class CSVtoStatProcessingAlgorithm(QgsProcessingAlgorithm):
             nfeature = QgsFeature(fields)
 
             nfeature['address'] = row[0]
-            nfeature['count'] = int(row[1])
+            nfeature['snum'] = int(row[1])
             sink.addFeature(nfeature, QgsFeatureSink.FastInsert)
 
             # Update the progress bar

@@ -257,7 +257,7 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
         statv = outputs_statv["OUTPUT"]
         meshid = meshidfields[0]
         param1 = { 'INPUT' : statv, 
-                 'OUTPUT' : QgsProcessing.TEMPORARY_OUTPUT, 'aggrefield' : 'count', 
+                 'OUTPUT' : QgsProcessing.TEMPORARY_OUTPUT, 'aggrefield' : 'snum', 
                  'meshid' : meshid,
                 'meshlayer' : meshLayer}
         
@@ -443,7 +443,7 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
              
             #  再度メッシュ集計
             param2 = { 'INPUT' : statv, 
-                        'OUTPUT' : QgsProcessing.TEMPORARY_OUTPUT, 'aggrefield' : 'count', 
+                        'OUTPUT' : QgsProcessing.TEMPORARY_OUTPUT, 'aggrefield' : 'snum', 
                          'meshid' : meshid,
                         'meshlayer' : new_mesh}
 

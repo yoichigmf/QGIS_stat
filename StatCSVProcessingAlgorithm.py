@@ -113,7 +113,7 @@ class StatCsvProcessingAlgorithm(QgsProcessingAlgorithm):
         # SpatiaLiteでSQLを実行
         alg_params = {
             'DATABASE': outputs['Geopackage']['OUTPUT'],
-            'SQL': 'update \"出力レイヤ\" set count=0 where count is NULL'
+            'SQL': 'update \"出力レイヤ\" set snum=0 where snum is NULL'
         }
         outputs['Spatialitesql'] = processing.run('qgis:spatialiteexecutesql', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
 
