@@ -242,11 +242,12 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
                  #             'OUTPUT' : parameters["OUTPUT"], 'OVERLAY' : res3["OUTPUT"], 'OVERLAY_FIELDS' : [] }
 
 #      ここはIntersectではなくて union
-        res2 = processing.run('native:intersection', params2,  context=context, feedback=feedback ,is_child_algorithm=True)
+        #res2 = processing.run('native:intersection', params2,  context=context, feedback=feedback ,is_child_algorithm=True)
+        res2 = processing.run('qgis:union', params2,  context=context, feedback=feedback ,is_child_algorithm=True)
         if feedback.isCanceled():
             return {}
 
-        feedback.pushConsoleInfo( "intersect  OK "  )
+        feedback.pushConsoleInfo( "union  OK "  )
     #   Inter sect ポリゴンの面積計算
 
 
