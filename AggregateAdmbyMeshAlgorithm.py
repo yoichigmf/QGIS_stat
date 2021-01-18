@@ -327,7 +327,7 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
 
      #  按分数値算出
 
-        anbun_col = 'value'
+        anbun_col = 'snum'
 
         formula_str = aggrefields[0] + " * " + ratio_column
 

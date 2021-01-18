@@ -315,7 +315,7 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
 
         lower_ids = []
 
-        value_column = "value"
+        value_column = "snum"
 
         #    limit 値より小さい値のポリゴン数算出
         for f in  mesh_layb.getFeatures():
