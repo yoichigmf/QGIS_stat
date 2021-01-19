@@ -48,6 +48,7 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingParameterNumber,
                        QgsProcessingOutputVectorLayer,
                        QgsVirtualLayerDefinition,
+                       QgsProcessingParameterCrs,
                        QgsVectorLayer,
                        QgsProcessingUtils,
                        QgsProcessingMultiStepFeedback,
@@ -168,6 +169,15 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
         # usually takes the form of a newly created vector layer when the
         # algorithm is run in QGIS).
         self.addParameter(
+         QgsProcessingParameterCrs(
+                'CRS',
+                "出力ファイル座標系",
+                optional=True
+            )
+        )
+
+
+        self.addParameter(
             QgsProcessingParameterFeatureSink(
                 self.OUTPUT,
                 self.tr('Output layer')
@@ -231,7 +241,8 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
              context)
 
                    
-
+        #out_crs = self.parameterAsCrs( parameters, 'CRS', context )
+        out_crs = parameters['CRS']
 
         feedback.setCurrentStep(1)
         if feedback.isCanceled():
@@ -244,6 +255,7 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
             'addressfield': parameters['addressfield'],
             'INPUT': csvfile,
             'ENCODING': enc,
+            'CRS': None,
             'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
         }
 
@@ -631,14 +643,19 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
 
             resLayer.dataProvider().addFeatures( addfeatures)
 
-
+            option_str = ''
+            if out_crs is None:
+                feedback.pushConsoleInfo( "output crs  is not specified"   )
+            else:
+                feedback.pushConsoleInfo( "output crs  " + out_crs.authid()  )
+                option_str = "-t_srs " + out_crs.authid()
             
 
 
                    # フォーマット変換（gdal_translate）
             alg_params = {
             'INPUT': resLayer,
-            'OPTIONS': '',
+            'OPTIONS': option_str,
             'OUTPUT': parameters['OUTPUT']
                }
             ocv = processing.run('gdal:convertformat', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
@@ -648,20 +665,26 @@ class CSVStatMeshAggreProcessingAlgorithm(QgsProcessingAlgorithm):
 
        #   均等分割の場合
         else:
-
+            option_str = ''
+            if out_crs is None:
+                feedback.pushConsoleInfo( "output crs  is not specified"   )
+            else:
+                feedback.pushConsoleInfo( "output crs  " + out_crs.authid()  )
+                option_str = "-t_srs " + out_crs.authid()
+            
        
        # フォーマット変換（gdal_translate）
-             alg_params = {
+            alg_params = {
             'INPUT': last_output,
-            'OPTIONS': '',
+            'OPTIONS': option_str,
             'OUTPUT': parameters['OUTPUT']
              }
-             ocv = processing.run('gdal:convertformat', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
+            ocv = processing.run('gdal:convertformat', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
 
 
 
-             results["OUTPUT"] = ocv["OUTPUT"]
-             return  results
+            results["OUTPUT"] = ocv["OUTPUT"]
+            return  results
 
 
     def name(self):

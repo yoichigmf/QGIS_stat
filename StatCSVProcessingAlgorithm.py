@@ -36,6 +36,7 @@ from qgis.core import QgsProcessingParameterEnum
 from qgis.core import QgsProcessingParameterVectorLayer
 from qgis.core import QgsProcessingParameterFile
 from qgis.core import QgsProcessingParameterField
+from qgis.core import QgsProcessingParameterCrs
 from qgis.core import QgsProcessingParameterVectorDestination
 import processing
 
@@ -58,6 +59,15 @@ class StatCsvProcessingAlgorithm(QgsProcessingAlgorithm):
 
         self.addParameter(QgsProcessingParameterEnum('ENCODING', 'ENCODE', options=['SJIS','UTF-8'], allowMultiple=False, defaultValue=None))
 
+
+        self.addParameter(
+            QgsProcessingParameterCrs(
+                'CRS',
+                "出力ファイル座標系",
+                optional=True
+            )
+        )
+
         self.addParameter(QgsProcessingParameterVectorDestination('OUTPUT', '出力ファイル名', type=QgsProcessing.TypeVectorAnyGeometry, createByDefault=True, defaultValue=None))
 
     def processAlgorithm(self, parameters, context, model_feedback):
@@ -73,6 +83,10 @@ class StatCsvProcessingAlgorithm(QgsProcessingAlgorithm):
             'INPUT': parameters['INPUT'],
             'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
         }
+
+        out_crs = parameters['CRS']
+
+
         outputs['Csvtostatprocessing'] = processing.run('QGIS_stat:CSVtoStatProcessing', alg_params, context=context, feedback=feedback, is_child_algorithm=True)
         model_feedback.pushConsoleInfo( "end csv")
         feedback.setCurrentStep(1)
@@ -121,10 +135,17 @@ class StatCsvProcessingAlgorithm(QgsProcessingAlgorithm):
         if feedback.isCanceled():
             return {}
 
+        option_str = ''
+        if out_crs is None:
+            feedback.pushConsoleInfo( "output crs  is not specified"   )
+        else:
+            feedback.pushConsoleInfo( "output crs  " + out_crs.authid()  )
+            option_str = "-t_srs " + out_crs.authid()
+
         # フォーマット変換（gdal_translate）
         alg_params = {
             'INPUT': outputs['Geopackage']['OUTPUT'],
-            'OPTIONS': '',
+            'OPTIONS': option_str,
             'OUTPUT': parameters['OUTPUT']
         }
         outputs['Gdal_translate'] = processing.run('gdal:convertformat', alg_params, context=context, feedback=feedback, is_child_algorithm=True)

@@ -43,6 +43,7 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingParameterVectorDestination,
                        QgsProcessingParameterFile,
                        QgsProcessingOutputVectorLayer,
+                       QgsProcessingParameterCrs,
                        QgsVirtualLayerDefinition,
                        QgsVectorLayer,
                        QgsProcessingUtils,
@@ -105,6 +106,8 @@ class CSVtoStatProcessingAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             encParam
         )
+
+
 
 
 
