@@ -118,6 +118,8 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
                          type=QgsProcessingParameterField.String, parentLayerParameterName='meshlayer', optional=False, allowMultiple=False))
 
 
+
+ 
         #self.addParameter(QgsProcessingParameterNumber('limit_sample', '最小サンプル数',
         #                  defaultValue=3))
 
@@ -201,6 +203,8 @@ class AggregateAdmbyMeshAlgorithm(QgsProcessingAlgorithm):
              'aggrefield',
              context
         )
+
+
 
         #limit_sample = self.parameterAsInt ( parameters,
         #     'limit_sample',

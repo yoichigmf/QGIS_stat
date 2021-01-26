@@ -40,7 +40,7 @@ from .AggregateAdmbyMeshAlgorithm import AggregateAdmbyMeshAlgorithm
 
 from .CSVStaticMeshAggrePop import CSVStatMeshAggrePopProcessingAlgorithm
 
-from .CalcPopfromMeshAlgorithm import CalcPopfromMeshAlgorithm
+from .UnionAdmAndPopMeshAlgorithm import UnionAdmAndPopMeshAlgorithm
 
 
 class QGISStatProcessingProvider(QgsProcessingProvider):
@@ -69,7 +69,7 @@ class QGISStatProcessingProvider(QgsProcessingProvider):
         self.addAlgorithm(AggregateAdmbyMeshAlgorithm())
         self.addAlgorithm(CSVStatMeshAggrePopProcessingAlgorithm())
 
-        self.addAlgorithm(CalcPopfromMeshAlgorithm())
+        self.addAlgorithm(UnionAdmAndPopMeshAlgorithm())
         
 
         # add additional algorithms here

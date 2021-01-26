@@ -65,7 +65,7 @@ import csv
 from .mod import  agtools
 #SplitMeshLayer( last_output ,  meshid  )
 
-class CalcPopfromMeshAlgorithm(QgsProcessingAlgorithm):
+class UnionAdmAndPopMeshAlgorithm(QgsProcessingAlgorithm):
     """
     This is an example algorithm that takes a vector layer and
     creates a new identical one.
@@ -118,6 +118,14 @@ class CalcPopfromMeshAlgorithm(QgsProcessingAlgorithm):
 
 
         self.addParameter(
+        QgsProcessingParameterString(
+            "POPCOLUMN",
+            self.tr("分割メッシュ人口カラム名"),
+            defaultValue="dpop"
+            )
+        )
+
+        self.addParameter(
             QgsProcessingParameterFeatureSink(
                 self.OUTPUT,
                 self.tr('Output layer')
@@ -166,7 +174,7 @@ class CalcPopfromMeshAlgorithm(QgsProcessingAlgorithm):
              context
         )                  
 
-  
+        dpop_fieldname = self.parameterAsString(parameters, "POPCOLUMN", context)
 
         feedback.setCurrentStep(1)
         if feedback.isCanceled():
@@ -246,10 +254,11 @@ class CalcPopfromMeshAlgorithm(QgsProcessingAlgorithm):
 
         #   分割ポリゴンの面積と元ポリゴンの面積の比率にメッシュ人口をかけて分割ポリゴンの想定人口を算出する
         ppopfield  = popmeshpopfields[0]
-        new_column = 'snum'
+        new_column = dpop_fieldname
 
         exp_str = area_column2 + "/" + area_column + "*" + ppopfield
 
+        feedback.pushConsoleInfo( "expression " + exp_str )   
 
         params5 = { 'INPUT' :  res4["OUTPUT"], 'FIELD_NAME' : new_column , 'FIELD_TYPE': 0, 'FIELD_LENGTH':12, 'FIELD_PRECISION':5, 
          #        'NEW_FIELD':1,'FORMULA':exp_str ,'OUTPUT' :QgsProcessing.TEMPORARY_OUTPUT }
@@ -257,12 +266,14 @@ class CalcPopfromMeshAlgorithm(QgsProcessingAlgorithm):
 
         res5 = processing.run('qgis:fieldcalculator', params5, context=context, feedback=feedback ,is_child_algorithm=True)
 
+        feedback.pushConsoleInfo( "snum calc end "   )
+
 
         results["OUTPUT"] = res5["OUTPUT"]
         return  results
 
 
-        feedback.pushConsoleInfo( "snum calc end "   )
+
 
         params_del2 = { 'INPUT' :  res5["OUTPUT"], 'COLUMN' : ['fid'] , 
                 'OUTPUT' :QgsProcessing.TEMPORARY_OUTPUT }
@@ -386,14 +397,14 @@ class CalcPopfromMeshAlgorithm(QgsProcessingAlgorithm):
         lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'CalcPopfromMeshAlgorithm'
+        return 'UnionAdmAndPopMeshAlgorithm'
 
     def displayName(self):
         """
         Returns the translated algorithm name, which should be used for any
         user-visible display of the algorithm name.
         """
-        return '行政界人口集計(メッシュ入力)'
+        return '行政界×人口メッシュUNION'
 
     def group(self):
         """
@@ -416,4 +427,4 @@ class CalcPopfromMeshAlgorithm(QgsProcessingAlgorithm):
         return QCoreApplication.translate('Processing', string)
 
     def createInstance(self):
-        return CalcPopfromMeshAlgorithm()
+        return UnionAdmAndPopMeshAlgorithm()

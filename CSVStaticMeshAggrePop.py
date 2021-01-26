@@ -290,10 +290,24 @@ class CSVStatMeshAggrePopProcessingAlgorithm(QgsProcessingAlgorithm):
 
         #   人口メッシュと行政界メッシュのUnion作成する
 
-        param_uni  = { 'INPUT' : statv, 
+
+
+        param_uni  = { 'addresslayer' : statv,  'addressfield':parameters['addressfield'],
+                   
                  'OUTPUT' : QgsProcessing.TEMPORARY_OUTPUT, 'aggrefield' : 'count', 
                  'meshid' : meshid,
                 'meshlayer' : meshLayer}
+
+
+
+
+
+        res_uni = processing.run('QGIS_stat:AggregateAdmbyMeshAlgorithm', param_uni, context=context, feedback=feedback, is_child_algorithm=True)
+
+        if feedback.isCanceled():
+            return {}
+
+
 
 
 
