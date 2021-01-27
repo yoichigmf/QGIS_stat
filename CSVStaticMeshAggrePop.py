@@ -46,6 +46,7 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingParameterBoolean,
                        QgsProcessingParameterField,
                        QgsProcessingParameterNumber,
+                       QgsProcessingParameterCrs,
                        QgsProcessingOutputVectorLayer,
                        QgsVirtualLayerDefinition,
                        QgsVectorLayer,
@@ -148,34 +149,20 @@ class CSVStatMeshAggrePopProcessingAlgorithm(QgsProcessingAlgorithm):
                          types=[QgsProcessing.TypeVectorPolygon], optional=False, defaultValue=None))
         
         self.addParameter(QgsProcessingParameterField('popmeshid', '人口メッシュIDフィールド', 
-                         type=QgsProcessingParameterField.String, parentLayerParameterName='meshlayer', optional=False, allowMultiple=False))
+                         type=QgsProcessingParameterField.String, parentLayerParameterName='popmeshlayer', optional=False, allowMultiple=False))
 
 
         self.addParameter(QgsProcessingParameterField('popmeshpop', '人口メッシュ人口フィールド', 
-                         type=QgsProcessingParameterField.Numeric, parentLayerParameterName='meshlayer', optional=False, allowMultiple=False))
+                         type=QgsProcessingParameterField.Numeric, parentLayerParameterName='popmeshlayer', optional=False, allowMultiple=False))
 
 
-
-        #  propotinal division method
-        #propParam = QgsProcessingParameterEnum(
-        #        "PROPDIV",
-        #        self.tr('按分方法選択')
-        #    )
-
-        #propParam.setOptions(self.proportional_div)
-        #propParam.setAllowMultiple(False)
-        #propParam.setDefaultValue(QVariant('人口'))
-        #  file encoding
-        #self.addParameter(
-         #   propParam
-        #)
-
-        #self.addParameter(QgsProcessingParameterVectorLayer('poplayer', '人口レイヤ',
-        #                 types=[QgsProcessing.TypeVectorPolygon], optional=True,  defaultValue=None))
-        #self.addParameter(QgsProcessingParameterField('popfield', '人口フィールド', 
-        #                 type=QgsProcessingParameterField.String, parentLayerParameterName='addresslayer', optional=True, allowMultiple=False, defaultValue=None))
-        
-
+        self.addParameter(
+         QgsProcessingParameterCrs(
+                'CRS',
+                "出力ファイル座標系",
+                optional=True
+            )
+        )
 
         # We add a feature sink in which to store our processed features (this
         # usually takes the form of a newly created vector layer when the
@@ -210,11 +197,6 @@ class CSVStatMeshAggrePopProcessingAlgorithm(QgsProcessingAlgorithm):
             'ENCODING',
             context)
 
-        #enc = self.parameterAsFile(
-        #    parameters,
-        #    self.ENCODING,
-        #    context
-        #)
         meshLayer = self.parameterAsVectorLayer(
             parameters,
             "meshlayer",
@@ -249,8 +231,10 @@ class CSVStatMeshAggrePopProcessingAlgorithm(QgsProcessingAlgorithm):
             "popmeshlayer",
             context
         )
-        if meshLayer  is None:
-            raise QgsProcessingException(self.tr('mesh layer missed'))
+        if popmeshLayer   is None:
+            raise QgsProcessingException(self.tr('popmes  layer missed'))
+
+
 
         popmeshidfields = self.parameterAsFields  (
              parameters,
@@ -258,7 +242,11 @@ class CSVStatMeshAggrePopProcessingAlgorithm(QgsProcessingAlgorithm):
              context
         )
 
-                   
+        popmeshpopfields = self.parameterAsFields  (
+             parameters,
+             'popmeshpop',
+             context
+        )                
 
 
         feedback.setCurrentStep(1)
@@ -272,6 +260,7 @@ class CSVStatMeshAggrePopProcessingAlgorithm(QgsProcessingAlgorithm):
             'addressfield': parameters['addressfield'],
             'INPUT': csvfile,
             'ENCODING': enc,
+            'CRS': None,
             'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
         }
 
@@ -292,17 +281,17 @@ class CSVStatMeshAggrePopProcessingAlgorithm(QgsProcessingAlgorithm):
 
 
 
-        param_uni  = { 'addresslayer' : statv,  'addressfield':parameters['addressfield'],
+        param_uni  = { 'addresslayer' : statv,  'addressfield':parameters['addressfield'][0],
                    
-                 'OUTPUT' : QgsProcessing.TEMPORARY_OUTPUT, 'aggrefield' : 'count', 
-                 'meshid' : meshid,
-                'meshlayer' : meshLayer}
+                 'OUTPUT' : QgsProcessing.TEMPORARY_OUTPUT, 'popmeshlayer' : popmeshLayer, 
+                 'popmeshid' :  popmeshidfields[0], 'popmeshpop':popmeshpopfields[0] ,
+                'POPCOLUMN"' : 'pv'}
 
 
 
 
 
-        res_uni = processing.run('QGIS_stat:AggregateAdmbyMeshAlgorithm', param_uni, context=context, feedback=feedback, is_child_algorithm=True)
+        res_uni = processing.run('QGIS_stat:UnionAdmAndPopMeshAlgorithm', param_uni, context=context, feedback=feedback, is_child_algorithm=True)
 
         if feedback.isCanceled():
             return {}
