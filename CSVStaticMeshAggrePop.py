@@ -297,9 +297,10 @@ class CSVStatMeshAggrePopProcessingAlgorithm(QgsProcessingAlgorithm):
             return {}
 
 
+        feedback.pushConsoleInfo( "union ok  "   )
 
 
-
+        #    create union  poplation mesh and input mesh
 
         param1 = { 'INPUT' : statv, 
                  'OUTPUT' : QgsProcessing.TEMPORARY_OUTPUT, 'aggrefield' : 'count', 
