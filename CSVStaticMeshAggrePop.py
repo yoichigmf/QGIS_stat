@@ -300,6 +300,21 @@ class CSVStatMeshAggrePopProcessingAlgorithm(QgsProcessingAlgorithm):
         feedback.pushConsoleInfo( "union ok  "   )
 
 
+        #     union pop polygon   res_unit["OUTPUT"]
+        #　　　population     pv
+        #      address   parameters['addressfield'][0]
+
+
+
+        #    行政界別人口の算出
+
+        #    行政界別人口とUNIONメッシュ人口の比率算出
+
+
+        #    入力メッシュとUnionメッシュのUnion
+
+        
+    
         #    create union  poplation mesh and input mesh
 
         param1 = { 'INPUT' : statv, 
