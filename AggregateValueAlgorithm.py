@@ -28,6 +28,8 @@ __copyright__ = '(C) 2021 by Yoichi Kayama'
 
 __revision__ = '$Format:%H$'
 
+from qgis.PyQt.QtCore import ( QCoreApplication ,
+                           QVariant)
 
 from qgis.core import QgsProcessing
 from qgis.core import QgsProcessingAlgorithm
@@ -37,11 +39,19 @@ from qgis.core import QgsProcessingParameterVectorLayer
 from qgis.core import QgsProcessingParameterFile
 from qgis.core import QgsProcessingParameterField
 from qgis.core import QgsProcessingParameterCrs
+from qgis.core import QgsProcessingParameterFeatureSink
 from qgis.core import QgsProcessingParameterVectorDestination
+from qgis.core import QgsProcessingUtils
+from qgis.core import QgsFeatureSink
+from qgis.core import QgsFeature
+from qgis.core import QgsFields
+from qgis.core import QgsField
 import processing
-
+import sqlite3
 
 class AggreagteValueAlgorithm(QgsProcessingAlgorithm):
+
+    OUTPUT = 'OUTPUT'
 
     def initAlgorithm(self, config=None):
         self.addParameter(QgsProcessingParameterVectorLayer('inputlayer', '集計レイヤ', types=[QgsProcessing.TypeVectorAnyGeometry,QgsProcessing.TypeVector ], defaultValue=None))
@@ -51,7 +61,7 @@ class AggreagteValueAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFeatureSink(
                 self.OUTPUT,
-                self.tr('出力レイヤ')
+                '出力レイヤ'
             )
         )
 
@@ -84,10 +94,142 @@ class AggreagteValueAlgorithm(QgsProcessingAlgorithm):
         )
 
 
- 
+      # ret = inputLayer.aggregate(QgsAggregateCalculator.Sum, fieldOrExpression: str, parameters: QgsAggregateCalculator.AggregateParameters = QgsAggregateCalculator.AggregateParameters(), context: QgsExpressionContext = None, fids: object = None)
+      # retar = sum(cfields[0], group_by:=agfields[0])
 
        # results['OUTPUT'] = outputs['Gdal_translate']['OUTPUT']
-        return results
+
+
+  
+
+        #enc = self.parameterAsFile(
+        #    parameters,
+        #    self.ENCODING,
+        #    context
+        #
+        # 
+        #)
+
+       # enc = self.parameterAsInt( parameters,self.ENCODING, context )
+
+        #encstring = self.encode[enc]
+        #feedback.pushConsoleInfo( encstring)
+
+        basename = "memorylayer.gpkg"
+        tmp_path = QgsProcessingUtils.generateTempFilename(basename)
+
+
+        conn = sqlite3.connect(tmp_path)
+     # sqliteを操作するカーソルオブジェクトを作成
+        cur = conn.cursor()
+
+        entbl = "sample_tbl"
+
+        key_fieldname = agfields[0]
+        value_fieldname = cfields[0]
+        feedback.pushConsoleInfo( "field name " +  key_fieldname )
+
+
+     # 調査結果格納テーブルの作成
+        crsql = 'CREATE TABLE \"' + entbl + '\"( \"' + key_fieldname + '\" STRING, \"' + value_fieldname +  '\" NUMERIC);'
+        cur.execute( crsql)
+
+       # uri = csvfile
+
+        #valueAsPythonString(
+         # csv file read
+
+          #    read input layer
+
+        
+        isql = 'insert into \"' + entbl + '\" values (?,?);'
+
+        for f in  inputLayer.getFeatures():
+           
+
+            t = '(\'' + f[key_fieldname ] + '\',' + str(f[value_fieldname] ) + ',)'
+
+            sqv = []
+            sqv.append(f[key_fieldname ])
+            sqv.append(f[value_fieldname])
+            feedback.pushConsoleInfo( "value  " + t )
+        
+
+            cur.execute(isql, sqv)
+
+    # データベースへコミット。これで変更が反映される。
+        conn.commit()
+
+
+
+        sqlstr = 'create table temp_vlayer as select \"' + key_fieldname  + '\", sum(\"' + value_fieldname + '\") vn from \"' + entbl + '\"  group by \"' + key_fieldname + '\";'
+         # 町名別集計
+        cur.execute(sqlstr )
+
+
+
+        feedback.pushConsoleInfo( "execute   " + sqlstr )
+
+
+        result_def = tmp_path + '|layername=temp_vlayer'
+        tgttable = "temp_vlayer"
+
+        #results["OUTPUT"] = result_def
+
+        #return results
+
+        fields = QgsFields()
+        fields.append(QgsField(key_fieldname , QVariant.String))
+        fields.append(QgsField(value_fieldname, QVariant.Double))
+
+        (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context,
+                                               fields )
+
+        feedback.pushConsoleInfo( "create sink    "  )
+
+        # Compute the number of steps to display within the progress bar and
+        # get features from source
+        #total = 100.0 / resultlayer.featureCount() if resultlayer.featureCount() else 0
+        #features = resultlayer.getFeatures()
+
+
+        sqlstr = 'select \"' +  key_fieldname + '\",' +    'vn from temp_vlayer;'
+
+        c = conn.cursor()
+
+
+        for row in c.execute( sqlstr ):
+
+        #for current, feature in enumerate(list1):
+            # Stop the algorithm if cancel button has been clicked
+            if feedback.isCanceled():
+                break
+
+
+
+            nfeature = QgsFeature(fields)
+
+            nfeature[key_fieldname ] = row[0]
+            nfeature[value_fieldname] = row[1]
+            sink.addFeature(nfeature, QgsFeatureSink.FastInsert)
+
+            # Update the progress bar
+            #feedback.setProgress(int(current * total))
+
+
+        conn.close()
+
+
+
+        # Return the results of the algorithm. In this case our only result is
+        # the feature sink which contains the processed features, but some
+        # algorithms may return multiple feature sinks, calculated numeric
+        # statistics, etc. These should all be included in the returned
+        # dictionary, with keys matching the feature corresponding parameter
+        # or output names.
+        return {self.OUTPUT: dest_id }
+
+
 
     def name(self):
         return 'AggreagteValueAlgorithm'
