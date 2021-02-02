@@ -279,13 +279,13 @@ class CSVStatMeshAggrePopProcessingAlgorithm(QgsProcessingAlgorithm):
 
         #   人口メッシュと行政界メッシュのUnion作成する
 
-
+        new_popfield = 'pv'
 
         param_uni  = { 'addresslayer' : statv,  'addressfield':parameters['addressfield'][0],
                    
                  'OUTPUT' : QgsProcessing.TEMPORARY_OUTPUT, 'popmeshlayer' : popmeshLayer, 
                  'popmeshid' :  popmeshidfields[0], 'popmeshpop':popmeshpopfields[0] ,
-                'POPCOLUMN"' : 'pv'}
+                'POPCOLUMN' : new_popfield}
 
 
 
@@ -308,12 +308,30 @@ class CSVStatMeshAggrePopProcessingAlgorithm(QgsProcessingAlgorithm):
 
         #    行政界別人口の算出
 
+        
+
+        param_pop  = { 'inputlayer' : res_uni['OUTPUT'],  'agfield':parameters['addressfield'],                 
+                # 'OUTPUT' : QgsProcessing.TEMPORARY_OUTPUT,
+                 'OUTPUT':parameters['OUTPUT'],
+                'cfield' :new_popfield}
+
+
+        res_adpop  = processing.run('QGIS_stat:AggreagteValueAlgorithm', param_pop, context=context, feedback=feedback, is_child_algorithm=True)
+
+        if feedback.isCanceled():
+            return {}
+
+        feedback.pushConsoleInfo( "caliculate pop adm ok  "   )
+
+      
+        results["OUTPUT"] = res_adpop['OUTPUT']
+        return results
         #    行政界別人口とUNIONメッシュ人口の比率算出
 
 
         #    入力メッシュとUnionメッシュのUnion
 
-        
+
     
         #    create union  poplation mesh and input mesh
 

@@ -129,6 +129,7 @@ class AggreagteValueAlgorithm(QgsProcessingAlgorithm):
         value_fieldname = cfields[0]
         feedback.pushConsoleInfo( "field name " +  key_fieldname )
 
+        feedback.pushConsoleInfo( "value field name " +  value_fieldname)
 
      # 調査結果格納テーブルの作成
         crsql = 'CREATE TABLE \"' + entbl + '\"( \"' + key_fieldname + '\" STRING, \"' + value_fieldname +  '\" NUMERIC);'
@@ -147,15 +148,31 @@ class AggreagteValueAlgorithm(QgsProcessingAlgorithm):
         for f in  inputLayer.getFeatures():
            
 
-            t = '(\'' + f[key_fieldname ] + '\',' + str(f[value_fieldname] ) + ',)'
+           # t = '(\'' + f[key_fieldname ] + '\',' + str(f[value_fieldname] ) + ',)'
+            #feedback.pushConsoleInfo( "class  " + f[key_fieldname].__class__.__name__ + ' ' + f[value_fieldname].__class__.__name__ )
+
 
             sqv = []
-            sqv.append(f[key_fieldname ])
-            sqv.append(f[value_fieldname])
-            feedback.pushConsoleInfo( "value  " + t )
         
 
-            cur.execute(isql, sqv)
+            if isinstance(f[value_fieldname] ,(int,float)):
+
+                if (type(f[key_fieldname]) is str ):
+                    sqv.append(f[key_fieldname])
+                    sqv.append(f[value_fieldname])
+                    cur.execute(isql, sqv)
+            else:
+
+                feedback.pushConsoleInfo( "no value  "  )
+
+                if (type( f[key_fieldname]) is str ):
+                    sqv.append(f[key_fieldname])
+                    sqv.append(0)
+                    cur.execute(isql, sqv)
+               
+        
+            
+            
 
     # データベースへコミット。これで変更が反映される。
         conn.commit()
@@ -235,7 +252,7 @@ class AggreagteValueAlgorithm(QgsProcessingAlgorithm):
         return 'AggreagteValueAlgorithm'
 
     def displayName(self):
-        return '集計'
+        return '集計(レイヤ入力,表出力)'
 
     def group(self):
         return '集計'
